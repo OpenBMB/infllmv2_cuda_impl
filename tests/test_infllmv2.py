@@ -2,7 +2,7 @@
 
 import torch
 from einops import repeat
-from block_sparse_attn import (
+from infllm_v2 import (
     block_sparse_attn_func,
 )
 from utils import (
