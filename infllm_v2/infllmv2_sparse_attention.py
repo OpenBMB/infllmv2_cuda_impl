@@ -22,7 +22,7 @@ def replace_ones_with_count(tensor):
     return tensor, ones_num
 
 
-def _block_sparse_attn_forward(
+def _infllmv2_sparse_attn_forward(
     q, k, v,
     cu_seqlens_q, cu_seqlens_k,
     m_block_dim, n_block_dim,
@@ -94,7 +94,7 @@ def _block_sparse_attn_forward(
     return out, q, k, v, softmax_lse, blockmask_uint64, rng_state  # Return blockmask_uint64 to store in ctx
 
 
-def _block_sparse_attn_backward(
+def _infllmv2_sparse_attn_backward(
     dout,
     q, k, v,
     out,
@@ -189,7 +189,7 @@ def _block_sparse_attn_backward(
     return dq, dk, dv, softmax_d
 
 
-class BlockSparseAttnFun(torch.autograd.Function):
+class InfLLMv2SparseAttnFun(torch.autograd.Function):
     @staticmethod
     def forward(ctx,
                 q, k, v,
@@ -216,7 +216,7 @@ class BlockSparseAttnFun(torch.autograd.Function):
             assert streaming_info is not None
             assert is_causal
         
-        out, q_orig, k_orig, v_orig, softmax_lse, fwd_blockmask_uint64, rng_state= _block_sparse_attn_forward(
+        out, q_orig, k_orig, v_orig, softmax_lse, fwd_blockmask_uint64, rng_state= _infllmv2_sparse_attn_forward(
             q, k, v,
             cu_seqlens_q, cu_seqlens_k,
             m_block_dim, n_block_dim,
@@ -276,7 +276,7 @@ class BlockSparseAttnFun(torch.autograd.Function):
         bwd_blockmask_uint64, _ = blockmask_to_uint64(transposed_blockmask)
         
         assert not ctx.exact_streaming, "Exact streaming not supported in backward pass"
-        _block_sparse_attn_backward(
+        _infllmv2_sparse_attn_backward(
             dout,
             q, k, v,
             out,
@@ -306,7 +306,7 @@ class BlockSparseAttnFun(torch.autograd.Function):
         return dq, dk, dv, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
 
 
-def block_sparse_attn_func(
+def infllmv2_sparse_attn_func(
     q, k, v,
     cu_seqlens_q, cu_seqlens_k,
     head_mask_type,
@@ -331,7 +331,7 @@ def block_sparse_attn_func(
     # Use different chunk sizes depending on tensor size to manage memory
     chunk_size = 1024 if q.shape[0] > 8192 else 2048
     
-    func = BlockSparseAttnFun
+    func = InfLLMv2SparseAttnFun
     
     # Define block dimensions - using a fixed block size of 64 for n_block_dim
     m_block_dim = 16
@@ -385,7 +385,7 @@ def block_sparse_attn_func(
         )
 
 
-def block_sparse_attn_kvcache_func(
+def infllmv2_sparse_attn_kvcache_func(
     q,                    # batch_size x seqlen_q x num_heads x head_size
     k_cache,               # batch_size_c x seqlen_k x num_heads_k x head_size
     v_cache, 

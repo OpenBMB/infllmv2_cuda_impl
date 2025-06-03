@@ -3,7 +3,7 @@
 import torch
 from einops import repeat
 from infllm_v2 import (
-    block_sparse_attn_func,
+    infllmv2_sparse_attn_func,
 )
 from utils import (
     generate_random_padding_mask,
@@ -106,9 +106,9 @@ def test_flash_attn_varlen_block_output(
     head_mask_type = torch.tensor([1] * nheads_k, device=device, dtype=torch.int32)
     streaming_info = torch.tensor([0, 0] * nheads_k, device=device, dtype=torch.int32)
     
-    logger.info("Running block_sparse_attn_func")
+    logger.info("Running infllmv2_sparse_attn_func")
     attn_start = time.time()
-    out_unpad = block_sparse_attn_func(
+    out_unpad = infllmv2_sparse_attn_func(
         q_unpad, k_unpad, v_unpad,
         cu_seqlens_q, cu_seqlens_k,
         head_mask_type,
@@ -123,7 +123,7 @@ def test_flash_attn_varlen_block_output(
         return_attn_probs=False,
         block_window_size=block_window_size,
     )
-    logger.info(f"block_sparse_attn_func completed in {time.time() - attn_start:.2f}s")
+    logger.info(f"infllmv2_sparse_attn_func completed in {time.time() - attn_start:.2f}s")
     
     out = output_pad_fn(out_unpad)
     
@@ -215,7 +215,7 @@ def test_flash_attn_varlen_block_output(
         v_unpad_cp = v_unpad.detach().clone().requires_grad_(True)
         
         # Run forward pass with the copies
-        out_unpad_cp = block_sparse_attn_func(
+        out_unpad_cp = infllmv2_sparse_attn_func(
             q_unpad_cp, k_unpad_cp, v_unpad_cp,
             cu_seqlens_q, cu_seqlens_k,
             head_mask_type,
