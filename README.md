@@ -48,6 +48,19 @@ Set the following environment variables to control the build:
 - SM 89: RTX 40 series
 - SM 90: H100
 
+## References
+
+```bibtex
+@misc{guo2024blocksparse,
+  author       = {Guo, Junxian and Tang, Haotian and Yang, Shang and Zhang, Zhekai and Liu, Zhijian and Han, Song},
+  title        = {{Block Sparse Attention}},
+  year         = {2024},
+  publisher    = {GitHub},
+  journal      = {GitHub repository},
+  howpublished = {\url{https://github.com/mit-han-lab/Block-Sparse-Attention}}
+}
+```
+
 ## License
 
 Apache License 2.0
