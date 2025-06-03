@@ -96,8 +96,8 @@ def test_flash_attn_varlen_block_output(
         dk_pad_fn,
     ) = generate_qkv(q, k, v, query_padding_mask, key_padding_mask, kvpacked=False)
 
-    # Generate topk indices for block sparse attention - use total number of queries after unpadding
-    logger.info("Generating topk indices for block sparse attention")
+    # Generate topk indices for infllmv2_sparse_attention - use total number of queries after unpadding
+    logger.info("Generating topk indices for infllmv2_sparse_attention")
     total_seqlen_q = q_unpad.shape[0]
     topk_idx = generate_topk_indices(nheads_k, total_seqlen_q, max_seqlen_k, sparsity, block_size, device)
     # Also generate block mask for reference implementation
@@ -290,10 +290,10 @@ def test_flash_attn_varlen_block_output(
     
     # Forward check
     if max_diff <= 2 * pt_max_diff:
-        print("✅ Test PASSED: Block sparse attention matches reference within tolerance")
+        print("✅ Test PASSED: infllmv2_sparse_attention matches reference within tolerance")
         fwd_pass = True
     else:
-        print(f"❌ Test FAILED: Block sparse attention difference ({max_diff}) exceeds tolerance (2 * {pt_max_diff})")
+        print(f"❌ Test FAILED: infllmv2_sparse_attention difference ({max_diff}) exceeds tolerance (2 * {pt_max_diff})")
         fwd_pass = False
     
     # Backward check

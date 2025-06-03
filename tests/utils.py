@@ -93,7 +93,7 @@ def unpad_input(input_tensor, attention_mask):
 
 def generate_topk_indices(nheads_k, total_seqlen, seqlen_k, sparsity, block_size, device):
     """
-    Generate random topk indices for block sparse attention.
+    Generate random topk indices for infllmv2_sparse_attention.
     
     Args:
         nheads_k: Number of key heads
@@ -129,7 +129,7 @@ def generate_topk_indices(nheads_k, total_seqlen, seqlen_k, sparsity, block_size
 
 def generate_batch_topk_indices(nheads_k, batch_size, seqlen_q, seqlen_k, num_topk, block_size, device, mode="random"):
     """
-    Generate random topk indices for block sparse attention with explicit batch handling.
+    Generate random topk indices for infllmv2_sparse_attention with explicit batch handling.
     
     Args:
         nheads_k: Number of key heads
@@ -228,7 +228,7 @@ def convert_topk_to_base_blockmask(
     device: str = "cuda"
 ) -> torch.Tensor:
     """
-    Convert topk indices to block sparse attention mask
+    Convert topk indices to infllmv2_sparse_attention mask
     
     Args:
         topk_idx: Tensor of shape [num_heads, total_seqlen, k] containing block indices
@@ -266,7 +266,7 @@ def convert_batch_topk_to_base_blockmask(
     device: str = "cuda"
 ) -> torch.Tensor:
     """
-    Convert batch topk indices to block sparse attention mask with batch dimension
+    Convert batch topk indices to infllmv2_sparse_attention mask with batch dimension
     
     Args:
         topk_idx: Tensor of shape [batch_size, num_heads, seqlen_q, k] containing block indices
@@ -943,7 +943,7 @@ def generate_base_sparsity_mask(max_seqlen_q, max_seqlen_k, round_base, m_block_
                                      batch_size, num_blocksparse_heads, pattern_type="random", 
                                      sparsity_list=None, causal=False, device="cuda"):
     """
-    Generate structured sparsity masks for block sparse attention.
+    Generate structured sparsity masks for infllmv2_sparse_attention.
     
     Parameters:
         pattern_type: String indicating the pattern type:
@@ -1468,7 +1468,7 @@ def visualize_blockmask_accuracy(out, out_ref, mixed_mask, config_name):
     Args:
         out: Output tensor from implementation being tested
         out_ref: Reference output tensor
-        mixed_mask: Block sparse attention mask where True means masked out (don't attend)
+        mixed_mask: infllmv2_sparse_attention mask where True means masked out (don't attend)
         config_name: Name for the configuration, used for saving files
     """
     # Create directory for this test case
