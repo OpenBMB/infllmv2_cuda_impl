@@ -1,3 +1,6 @@
+#include <torch/extension.h>
+#include <ATen/ATen.h>
+#include <c10/util/Optional.h>
 #include <pybind11/pybind11.h>
 #include "topk.cuh"
 #include "get_probs.cuh"
@@ -5,6 +8,16 @@
 #include "topk_to_uint64.cuh"
 #include "uint64_to_bool.cuh"
 #include "max_pooling_1d.cuh"
+
+// Forward declarations for Flash Attention functions
+std::vector<at::Tensor> mha_fwd(at::Tensor &q, const at::Tensor &k, const at::Tensor &v, c10::optional<at::Tensor> &out_, c10::optional<at::Tensor> &alibi_slopes_, const float p_dropout, const float softmax_scale, bool is_causal, int window_size_left, int window_size_right, const int n_block_dim, const bool return_softmax, c10::optional<at::Generator> gen_);
+std::vector<at::Tensor> mha_varlen_fwd(const at::Tensor &q, const at::Tensor &k, const at::Tensor &v, c10::optional<at::Tensor> &out_, const at::Tensor &cu_seqlens_q, const at::Tensor &cu_seqlens_k, c10::optional<at::Tensor> &seqused_k, c10::optional<at::Tensor> &alibi_slopes_, const int max_seqlen_q, const int max_seqlen_k, const float p_dropout, const float softmax_scale, const bool zero_tensors, const bool is_causal, int window_size_left, int window_size_right, const int n_block_dim, const bool return_softmax, c10::optional<at::Generator> gen_);
+std::vector<at::Tensor> mha_bwd(const at::Tensor &dout, const at::Tensor &q, const at::Tensor &k, const at::Tensor &v, const at::Tensor &out, const at::Tensor &softmax_lse, c10::optional<at::Tensor> &dq_, c10::optional<at::Tensor> &dk_, c10::optional<at::Tensor> &dv_, c10::optional<at::Tensor> &alibi_slopes_, const float p_dropout, const float softmax_scale, const bool is_causal, int window_size_left, int window_size_right, const int n_block_dim, const bool deterministic, c10::optional<at::Generator> gen_, c10::optional<at::Tensor> &rng_state);
+std::vector<at::Tensor> mha_varlen_bwd(const at::Tensor &dout, const at::Tensor &q, const at::Tensor &k, const at::Tensor &v, const at::Tensor &out, const at::Tensor &softmax_lse, c10::optional<at::Tensor> &dq_, c10::optional<at::Tensor> &dk_, c10::optional<at::Tensor> &dv_, const at::Tensor &cu_seqlens_q, const at::Tensor &cu_seqlens_k, c10::optional<at::Tensor> &alibi_slopes_, const int max_seqlen_q, const int max_seqlen_k, const float p_dropout, const float softmax_scale, const bool zero_tensors, const bool is_causal, int window_size_left, int window_size_right, const int n_block_dim, const bool deterministic, c10::optional<at::Generator> gen_, c10::optional<at::Tensor> &rng_state);
+std::vector<at::Tensor> mha_fwd_kvcache(at::Tensor &q, const at::Tensor &kcache, const at::Tensor &vcache, c10::optional<const at::Tensor> &k_, c10::optional<const at::Tensor> &v_, c10::optional<const at::Tensor> &seqlens_k_, c10::optional<const at::Tensor> &rotary_cos_, c10::optional<const at::Tensor> &rotary_sin_, c10::optional<const at::Tensor> &cache_batch_idx_, c10::optional<at::Tensor> &alibi_slopes_, c10::optional<at::Tensor> &out_, const float softmax_scale, bool is_causal, int window_size_left, int window_size_right, bool is_rotary_interleaved, int num_splits, const int n_block_dim);
+std::vector<at::Tensor> mha_fwd_block(const at::Tensor &q, const at::Tensor &k, const at::Tensor &v, const at::Tensor &cu_seqlens_q, const at::Tensor &cu_seqlens_k, const int m_block_dim, const int n_block_dim, const at::Tensor &head_mask_type, c10::optional<at::Tensor> &streaming_info_, c10::optional<at::Tensor> &row_blockmask_, const int max_seqlen_q_, const int max_seqlen_k_, const float p_dropout, const float softmax_scale, const bool is_causal, const bool exact_streaming, const bool return_softmax, int window_size_left, int window_size_right, int block_window_size, c10::optional<at::Generator> gen_);
+std::vector<at::Tensor> mha_bwd_block(const at::Tensor &dout, const at::Tensor &q, const at::Tensor &k, const at::Tensor &v, const at::Tensor &out, const at::Tensor &softmax_lse, c10::optional<at::Tensor> &dq_, c10::optional<at::Tensor> &dk_, c10::optional<at::Tensor> &dv_, const at::Tensor &cu_seqlens_q, const at::Tensor &cu_seqlens_k, const int m_block_dim, const int n_block_dim, const at::Tensor &head_mask_type, c10::optional<at::Tensor> &streaming_info_, c10::optional<at::Tensor> &col_blockmask_, const int max_seqlen_q_, const int max_seqlen_k_, const float p_dropout, const float softmax_scale, const bool zero_tensors, const bool is_causal, int window_size_left, int window_size_right, int block_window_size, const bool deterministic, c10::optional<at::Generator> gen_, c10::optional<at::Tensor> &rng_state);
+std::vector<at::Tensor> fwd_block_kvcache(at::Tensor &q, const at::Tensor &kcache, const at::Tensor &vcache, const int m_block_dim, const int n_block_dim, const at::Tensor &head_mask_type, c10::optional<at::Tensor> &streaming_info_, c10::optional<at::Tensor> &row_blockmask_, c10::optional<const at::Tensor> &k_, c10::optional<const at::Tensor> &v_, c10::optional<const at::Tensor> &seqlens_k_, c10::optional<const at::Tensor> &rotary_cos_, c10::optional<const at::Tensor> &rotary_sin_, c10::optional<const at::Tensor> &cache_batch_idx_, c10::optional<at::Tensor> &alibi_slopes_, c10::optional<at::Tensor> &out_, const float softmax_scale, bool is_causal, const bool exact_streaming, int window_size_left, int window_size_right, int block_window_size, bool is_rotary_interleaved, int num_splits);
 
 #define DTYPE_SWITCH(COND, ...)               \
     [&] {                                     \
@@ -141,10 +154,23 @@ void max_pooling_1d(
 }
 
 PYBIND11_MODULE(C, m) {
+    m.doc() = "InfLLM V2 CUDA Implementation with FlashAttention";
+    
+    // Original functions
     m.def("topk", &topk, "Topk func");
     m.def("get_probs", &get_probs, "Get probs func");
     m.def("blockmask_to_uint64", &blockmask_to_uint64, "Convert boolean mask to uint64 representation");
     m.def("topk_to_uint64", &topk_to_uint64, "Convert topk indices directly to uint64 representation");
     m.def("uint64_to_bool", &uint64_to_bool, "Convert uint64 representation back to boolean mask");
     m.def("max_pooling_1d", &max_pooling_1d, "Max pooling 1d func");
+    
+    // Flash Attention functions
+    m.def("fwd", &mha_fwd, "Forward pass");
+    m.def("varlen_fwd", &mha_varlen_fwd, "Forward pass (variable length)");
+    m.def("bwd", &mha_bwd, "Backward pass");
+    m.def("varlen_bwd", &mha_varlen_bwd, "Backward pass (variable length)");
+    m.def("fwd_kvcache", &mha_fwd_kvcache, "Forward pass, with KV-cache");
+    m.def("fwd_block", &mha_fwd_block, "Forward pass, with blockmask");
+    m.def("bwd_block", &mha_bwd_block, "Backward pass, with blockmask");
+    m.def("fwd_block_kvcache", &fwd_block_kvcache, "Forward pass, with blockmask and KV-cache");
 } 
