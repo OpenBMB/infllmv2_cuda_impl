@@ -1,22 +1,13 @@
 /******************************************************************************
  * Copyright (c) 2023, Tri Dao.
  ******************************************************************************/
-/******************************************************************************
- * Adapted by Junxian Guo from https://github.com/Dao-AILab/flash-attention/blob/main/csrc/flash_attn/src/flash.h
- ******************************************************************************/
 
 #pragma once
 
 #include <cuda.h>
 #include <vector>
 
-#ifdef OLD_GENERATOR_PATH
-#include <ATen/CUDAGeneratorImpl.h>
-#else
-#include <ATen/cuda/CUDAGeneratorImpl.h>
-#endif
-
-#include <ATen/cuda/CUDAGraphsUtils.cuh> // For at::cuda::philox::unpack
+#include <ATen/cuda/CUDAGeneratorImpl.h> // For at::Generator and at::PhiloxCudaState
 
 constexpr int TOTAL_DIM = 0;
 constexpr int H_DIM = 1;
@@ -70,8 +61,7 @@ struct Flash_fwd_params : public Qkv_params {
     void * __restrict__ softmax_lseaccum_ptr;
 
     // The dimensions.
-    int b, seqlen_q, seqlen_k, seqlen_knew, d, seqlen_q_rounded, seqlen_k_rounded, d_rounded, rotary_dim;
-    int max_seqlen_q_;
+    int b, seqlen_q, seqlen_k, seqlen_knew, d, seqlen_q_rounded, seqlen_k_rounded, d_rounded, rotary_dim, total_q;
 
     // The scaling factors for the kernel.
     float scale_softmax;
@@ -80,16 +70,14 @@ struct Flash_fwd_params : public Qkv_params {
     // array of length b+1 holding starting offset of each sequence.
     int * __restrict__ cu_seqlens_q;
     int * __restrict__ cu_seqlens_k;
+    int * __restrict__ leftpad_k;
 
     // If provided, the actual length of each k sequence.
     int * __restrict__ seqused_k;
 
-    // Changed from bool* to uint16_t* to support both bool and uint16_t
     uint64_t *__restrict__ blockmask;
-    int *__restrict__ streaming_info;
-    int *__restrict__ head_mask_type;
-    // add by JXGuo
-    int m_block_dim, n_block_dim, num_blocksparse_heads;
+    int m_block_dim, n_block_dim, num_k_heads;
+    int num_blocks_m, num_blocks_n, block_window_size;
 
     // The K_new and V_new matrices.
     void * __restrict__ knew_ptr;
@@ -108,7 +96,12 @@ struct Flash_fwd_params : public Qkv_params {
     void * __restrict__ rotary_sin_ptr;
 
     // The indices to index into the KV cache.
-    int *__restrict__ cache_batch_idx;
+    int * __restrict__ cache_batch_idx;
+
+    // Paged KV cache
+    int * __restrict__ block_table;
+    index_t block_table_batch_stride;
+    int page_block_size;
 
     // The dropout probability (probability of keeping an activation).
     float p_dropout;
@@ -122,6 +115,7 @@ struct Flash_fwd_params : public Qkv_params {
 
     // Local window size
     int window_size_left, window_size_right;
+    float softcap;
 
     // Random state.
     at::PhiloxCudaState philox_args;
@@ -131,7 +125,6 @@ struct Flash_fwd_params : public Qkv_params {
 
     bool is_bf16;
     bool is_causal;
-    bool is_exact_streaming;
 
     // If is_seqlens_k_cumulative, then seqlen_k is cu_seqlens_k[bidb + 1] - cu_seqlens_k[bidb].
     // Otherwise it's cu_seqlens_k[bidb], i.e., we use cu_seqlens_k to store the sequence lengths of K.
@@ -144,11 +137,8 @@ struct Flash_fwd_params : public Qkv_params {
     void * __restrict__ alibi_slopes_ptr;
     index_t alibi_slopes_batch_stride;
 
-    int num_blocks_m;  // Number of blocks in the M dimension (total_q / m_block_dim)
-    int num_blocks_n;  // For use in the backward pass
-    int block_window_size;
-    int num_topk;
-
+    bool unpadded_lse;  // For varlen paths: LSE is in [nheads, total_seqlen_q] format instead of [b, nheads, seqlen_q].
+    bool seqlenq_ngroups_swapped;  // q has been transposed from (b, 1, (nheads_kv ngroups), d) to (b, ngroups, nheads_kv, d).
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -191,19 +181,11 @@ struct Flash_bwd_params : public Flash_fwd_params {
 
     bool deterministic;
     index_t dq_accum_split_stride;
-
-    int num_blocks_m;  // Number of blocks in the M dimension (total_q / m_block_dim)
-    int num_blocks_n;  // Number of query blocks for the backward pass
-    int block_window_size;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-template<typename T, int Headdim> void run_mha_fwd_(Flash_fwd_params &params, cudaStream_t stream);
-template<typename T, int Headdim> void run_mha_fwd_splitkv_dispatch(Flash_fwd_params &params, cudaStream_t stream);
+template<typename T, int Headdim, bool Is_causal> void run_mha_fwd_(Flash_fwd_params &params, cudaStream_t stream);
+template<typename T, int Headdim, bool Is_causal> void run_mha_fwd_splitkv_dispatch(Flash_fwd_params &params, cudaStream_t stream);
 
-template<typename T, int Headdim> void run_mha_bwd_(Flash_bwd_params &params, cudaStream_t stream, const bool configure);
-
-template<typename T, int Headdim> void run_mha_fwd_block_(Flash_fwd_params &params, cudaStream_t stream);
-template<typename T, int Headdim> void run_mha_bwd_block_(Flash_bwd_params &params, cudaStream_t stream, const bool configure);
-template<typename T, int Headdim> void run_mha_fwd_splitkv_block_dispatch(Flash_fwd_params &params, cudaStream_t stream);
+template<typename T, int Headdim, bool Is_causal> void run_mha_bwd_(Flash_bwd_params &params, cudaStream_t stream);

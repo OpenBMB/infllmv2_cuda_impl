@@ -14,6 +14,7 @@
 ///     some_function<BoolConst>(...);
 /// });
 /// ```
+
 #define BOOL_SWITCH(COND, CONST_NAME, ...)      \
   [&] {                                         \
     if (COND) {                                 \
@@ -25,33 +26,64 @@
     }                                           \
   }()
 
+#ifdef FLASHATTENTION_DISABLE_DROPOUT
+  #define DROPOUT_SWITCH(COND, CONST_NAME, ...) \
+  [&] {                                         \
+    constexpr static bool CONST_NAME = false;   \
+    return __VA_ARGS__();                       \
+  }()
+#else
+  #define DROPOUT_SWITCH BOOL_SWITCH
+#endif
+
+#ifdef FLASHATTENTION_DISABLE_ALIBI
+  #define ALIBI_SWITCH(COND, CONST_NAME, ...)   \
+  [&] {                                         \
+    constexpr static bool CONST_NAME = false;   \
+    return __VA_ARGS__();                       \
+  }()
+#else
+  #define ALIBI_SWITCH BOOL_SWITCH
+#endif
+
+#ifdef FLASHATTENTION_DISABLE_UNEVEN_K
+  #define EVENK_SWITCH(COND, CONST_NAME, ...)   \
+  [&] {                                         \
+    constexpr static bool CONST_NAME = true;    \
+    return __VA_ARGS__();                       \
+  }()
+#else
+  #define EVENK_SWITCH BOOL_SWITCH
+#endif
+
+#ifdef FLASHATTENTION_DISABLE_SOFTCAP
+  #define SOFTCAP_SWITCH(COND, CONST_NAME, ...)   \
+  [&] {                                         \
+    constexpr static bool CONST_NAME = false;    \
+    return __VA_ARGS__();                       \
+  }()
+#else
+  #define SOFTCAP_SWITCH BOOL_SWITCH
+#endif
+
+#ifdef FLASHATTENTION_DISABLE_LOCAL
+  #define LOCAL_SWITCH(COND, CONST_NAME, ...)   \
+  [&] {                                         \
+    constexpr static bool CONST_NAME = false;    \
+    return __VA_ARGS__();                       \
+  }()
+#else
+  #define LOCAL_SWITCH BOOL_SWITCH
+#endif
+
 #define FP16_SWITCH(COND, ...)               \
   [&] {                                      \
-    using elem_type = cutlass::bfloat16_t;   \
-    return __VA_ARGS__();                    \
+      using elem_type = cutlass::bfloat16_t;     \
+      return __VA_ARGS__();                  \
   }()
 
-#define FWD_HEADDIM_SWITCH(HEADDIM, ...)   \
+#define HEADDIM_SWITCH(HEADDIM, ...)   \
   [&] {                                    \
-    constexpr static int kHeadDim = 128;   \
-    return __VA_ARGS__();                  \
+      constexpr static int kHeadDim = 128; \
+      return __VA_ARGS__();                \
   }()
-
-#define FWD_BLOCK_HEADDIM_SWITCH(HEADDIM, ...) \
-  [&] {                                        \
-    constexpr static int kHeadDim = 128;       \
-    return __VA_ARGS__();                      \
-  }()
-
-#define BWD_HEADDIM_SWITCH(HEADDIM, ...)   \
-  [&] {                                    \
-    constexpr static int kHeadDim = 128;   \
-    return __VA_ARGS__();                  \
-  }()
-
-#define BWD_BLOCK_HEADDIM_SWITCH(HEADDIM, ...) \
-  [&] {                                        \
-    constexpr static int kHeadDim = 128;       \
-    return __VA_ARGS__();                      \
-  }()
-  
