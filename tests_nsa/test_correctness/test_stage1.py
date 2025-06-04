@@ -20,7 +20,7 @@ def naive_attention(q, k, v, causal=False):
     score = score.reshape(2, 16, q.shape[1], k.shape[1]).sum(dim=1)
     return score
 
-def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, head_dim=128, dtype=torch.float16, bench=False, causal=False):
+def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, head_dim=128, dtype=torch.bfloat16, bench=False, causal=False):
     q = torch.randn(n_heads, seqlen_q, head_dim, dtype=dtype).cuda()
     k = torch.randn(n_kv_heads, seqlen_k, head_dim, dtype=dtype).cuda()
     v = torch.randn(n_kv_heads, seqlen_k, head_dim, dtype=dtype).cuda()
@@ -83,15 +83,15 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
             print("error: ", seqlen_q, seqlen_k)
 
 if __name__ == "__main__":
-    for seqlen in (list(range(1,100))+list(range(100, 1000, 100))+list(range(1000, 10000, 1000))):
-        test_flash_attn_varlen(seqlen_q=1, seqlen_k=seqlen, causal=False)
-    for seqlen in (list(range(100, 1000, 100))+list(range(1000, 10000, 1000))):
-        test_flash_attn_varlen(seqlen_q=seqlen, seqlen_k=seqlen//16, causal=True)
-    # test_flash_attn_varlen(seqlen_q=10000, seqlen_k=10000//16, causal=False)
-    # test_flash_attn_varlen(seqlen_q=10000, seqlen_k=10000//16, causal=True)
-    # test_flash_attn_varlen(seqlen_q=31235, seqlen_k=31235//16, causal=False)
-    # test_flash_attn_varlen(seqlen_q=31235, seqlen_k=31235//16, causal=True)
-    # test_flash_attn_varlen(seqlen_q=16384, seqlen_k=16384//16, bench=True)
-    # test_flash_attn_varlen(seqlen_q=32768, seqlen_k=32768//16, bench=True)
-    # test_flash_attn_varlen(seqlen_q=131072, seqlen_k=131072//16, bench=True)
-    # test_flash_attn_varlen(seqlen_q=131072, seqlen_k=131072//16, bench=True, causal=True)
+    # for seqlen in (list(range(1,100))+list(range(100, 1000, 100))+list(range(1000, 10000, 1000))):
+    #     test_flash_attn_varlen(seqlen_q=1, seqlen_k=seqlen, causal=False)
+    # for seqlen in (list(range(100, 1000, 100))+list(range(1000, 10000, 1000))):
+    #     test_flash_attn_varlen(seqlen_q=seqlen, seqlen_k=seqlen//16, causal=True)
+    test_flash_attn_varlen(seqlen_q=10000, seqlen_k=10000//16, causal=False)
+    test_flash_attn_varlen(seqlen_q=10000, seqlen_k=10000//16, causal=True)
+    test_flash_attn_varlen(seqlen_q=31235, seqlen_k=31235//16, causal=False)
+    test_flash_attn_varlen(seqlen_q=31235, seqlen_k=31235//16, causal=True)
+    test_flash_attn_varlen(seqlen_q=16384, seqlen_k=16384//16, bench=True)
+    test_flash_attn_varlen(seqlen_q=32768, seqlen_k=32768//16, bench=True)
+    test_flash_attn_varlen(seqlen_q=131072, seqlen_k=131072//16, bench=True)
+    test_flash_attn_varlen(seqlen_q=131072, seqlen_k=131072//16, bench=True, causal=True)
