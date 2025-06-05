@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from infllm_v2 import flash_attn_with_kvcache
+from infllm_v2 import infllmv2_attn_with_kvcache
 
 def naive_attention(q, k_full, v_full, blockmask):
     # 计算 attention
@@ -14,7 +14,7 @@ def naive_attention(q, k_full, v_full, blockmask):
     output = attn_weights @ v_full
     return output
 
-def test_flash_attn_with_kvcache(batch_size=1, seq_len=1, cache_len=100, ratio=1., n_heads=32, n_kv_heads=2, head_dim=128, dtype=torch.bfloat16):
+def test_infllmv2_attn_with_kvcache(batch_size=1, seq_len=1, cache_len=100, ratio=1., n_heads=32, n_kv_heads=2, head_dim=128, dtype=torch.bfloat16):
     q = torch.randn(batch_size, n_heads, seq_len, head_dim, dtype=dtype).cuda()
     k_cache = torch.randn(batch_size, n_kv_heads, cache_len, head_dim, dtype=dtype).cuda()
     v_cache = torch.randn(batch_size, n_kv_heads, cache_len, head_dim, dtype=dtype).cuda()
@@ -57,7 +57,7 @@ def test_flash_attn_with_kvcache(batch_size=1, seq_len=1, cache_len=100, ratio=1
 
     print(topk_idx)
 
-    flash_out = flash_attn_with_kvcache(
+    flash_out = infllmv2_attn_with_kvcache(
         q,
         k_pad,
         v_pad,
@@ -75,4 +75,4 @@ def test_flash_attn_with_kvcache(batch_size=1, seq_len=1, cache_len=100, ratio=1
     print("max diff :", (naive_out - flash_out).abs().max())
 
 if __name__ == "__main__":
-    test_flash_attn_with_kvcache(cache_len=10000, ratio=0.5)
+    test_infllmv2_attn_with_kvcache(cache_len=10000, ratio=0.5)
