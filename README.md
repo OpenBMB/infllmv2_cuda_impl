@@ -14,7 +14,7 @@ This CUDA kernel implementation includes both stages, providing:
 - Optimized relevance score computation and aggregation for Stage 1 (Top-K selection performed externally)
 - Efficient sparse attention on selected blocks for Stage 2
 - Significant reduction in computational costs for both forward and backward phases
-- Seamless integration with existing transformer architectures
+
 
 Built upon [FlashAttention](https://github.com/Dao-AILab/flash-attention), our kernels leverage efficient memory access patterns and optimized implementations for both stages.
 

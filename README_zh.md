@@ -14,7 +14,6 @@ InfLLM V2 引入了一种新颖的两阶段方法来高效处理长上下文：
 - 第一阶段优化的相关性分数计算和聚合（Top-K 选择在外部执行）
 - 第二阶段对选定块的高效稀疏注意力
 - 显著降低前向和反向阶段的计算成本
-- 与现有 Transformer 架构无缝集成
 
 基于 [FlashAttention](https://github.com/Dao-AILab/flash-attention) 构建，我们的内核在两个阶段都利用了高效的内存访问模式和优化实现。
 
