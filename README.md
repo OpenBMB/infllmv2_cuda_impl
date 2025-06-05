@@ -122,11 +122,6 @@ cd infllm-v2
 pip install -e .
 ```
 
-### Quick Install
-
-```bash
-pip install infllm-v2
-```
 
 ## Usage
 
@@ -252,23 +247,9 @@ For long sequences where `l >> km`, InfLLM V2 reduces computation by factor of `
 3. **Short Sequence Efficiency**: No overhead for sequences shorter than k blocks
 4. **Training-Inference Consistency**: Token-level queries maintain consistency across phases
 
-## Build Options
-
-Control the build process with these environment variables:
-
-- `INFLLM_V2_FORCE_BUILD=TRUE`: Force build from source
-- `INFLLM_V2_SKIP_CUDA_BUILD=TRUE`: Skip CUDA compilation
-- `INFLLM_V2_FORCE_CXX11_ABI=TRUE`: Force C++11 ABI
-- `INFLLM_V2_FAST_BUILD=TRUE`: Enable fast build mode (default: True)
-
 ## Supported GPU Architectures
 
-- **SM 70**: V100
-- **SM 75**: T4, RTX 20 series
 - **SM 80**: A100
-- **SM 86**: RTX 30 series, RTX A6000
-- **SM 87**: RTX A100
-- **SM 89**: RTX 40 series
 - **SM 90**: H100
 
 ## Training Pipeline

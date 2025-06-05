@@ -97,11 +97,8 @@ if not SKIP_CUDA_BUILD:
                 "Note: make sure nvcc has a supported version by running nvcc -V."
             )
     
-    # 支持多种常见的GPU架构
-    # 70: V100, 75: T4/RTX, 80: A100, 86: RTX 3090/RTX A6000, 89: RTX 4090, 90: H100
-    supported_archs = ["70", "75", "80", "86", "89", "90"]
-    for arch in supported_archs:
-        cc_flag.extend(["-gencode", f"arch=compute_{arch},code=sm_{arch}"])
+    cc_flag.append("-gencode")
+    cc_flag.append("arch=compute_80,code=sm_80")
     
     if CUDA_HOME is not None:
         if bare_metal_version >= Version("11.8"):
