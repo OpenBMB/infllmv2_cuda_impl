@@ -11,7 +11,7 @@ import numpy as np
 torch.set_printoptions(profile="full")
 
 # Create output directory for visualizations
-VISUALIZATION_DIR = Path("/user/qiqi/FA_NSA/gradient_visualizations")
+VISUALIZATION_DIR = Path("./gradient_visualizations")
 VISUALIZATION_DIR.mkdir(exist_ok=True)
 
 

@@ -1,7 +1,7 @@
 import time
 import torch
 import torch.nn.functional as F
-from infllm_v2 import flash_attn_nsa_stage1
+from infllm_v2 import flash_attn_infllmv2_stage1
 
 def naive_attention(q, k, v, causal=False):
     # 计算 attention
@@ -35,7 +35,7 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
     k = k.transpose(0, 1).contiguous().clone()
     v = v.transpose(0, 1).contiguous().clone()
 
-    flash_score = flash_attn_nsa_stage1(
+    flash_score = flash_attn_infllmv2_stage1(
         q,
         k,
         torch.tensor([[[1]]], dtype=q.dtype, device=q.device),
@@ -47,7 +47,7 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
     )
 
     if bench:
-        f = lambda : flash_attn_nsa_stage1(q, k, v, cu_seqlens_q=cu_seqlens_q, cu_seqlens_k=cu_seqlens_k, max_seqlen_q=seqlen_q, max_seqlen_k=seqlen_k, return_attn_probs=True, causal=causal)
+        f = lambda : flash_attn_infllmv2_stage1(q, k, v, cu_seqlens_q=cu_seqlens_q, cu_seqlens_k=cu_seqlens_k, max_seqlen_q=seqlen_q, max_seqlen_k=seqlen_k, return_attn_probs=True, causal=causal)
         for _ in range(3):
             f()
         torch.cuda.synchronize()
@@ -57,8 +57,8 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
         torch.cuda.synchronize()
         et = time.time()
         print(f"seqlen_q: {seqlen_q}, seqlen_k: {seqlen_k}, causal: {causal}")
-        print(f"flash_attn_nsa_stage1 time: {(et - st) / 10 * 1000} ms")
-        f = lambda : flash_attn_nsa_stage1(q, k, v, cu_seqlens_q=cu_seqlens_q, cu_seqlens_k=cu_seqlens_k, max_seqlen_q=seqlen_q, max_seqlen_k=seqlen_k, return_attn_probs=False, causal=causal)
+        print(f"flash_attn_infllmv2_stage1 time: {(et - st) / 10 * 1000} ms")
+        f = lambda : flash_attn_infllmv2_stage1(q, k, v, cu_seqlens_q=cu_seqlens_q, cu_seqlens_k=cu_seqlens_k, max_seqlen_q=seqlen_q, max_seqlen_k=seqlen_k, return_attn_probs=False, causal=causal)
         for _ in range(3):
             f()
         torch.cuda.synchronize()
@@ -67,7 +67,7 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
             f()
         torch.cuda.synchronize()
         et = time.time()
-        print(f"flash_attn_nsa_stage1 time (no return_attn_probs): {(et - st) / 10 * 1000} ms")
+        print(f"flash_attn_infllmv2_stage1 time (no return_attn_probs): {(et - st) / 10 * 1000} ms")
     else:
         flash_score = flash_score[:, :seqlen_q, :seqlen_k]
         if causal:

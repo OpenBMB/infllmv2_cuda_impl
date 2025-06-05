@@ -12,5 +12,5 @@ from .infllmv2_sparse_attention import (
     flash_attn_varlen_kvpacked_func,
     flash_attn_varlen_qkvpacked_func,
     flash_attn_with_kvcache,
-    flash_attn_nsa_stage1,
+    flash_attn_infllmv2_stage1,
 )

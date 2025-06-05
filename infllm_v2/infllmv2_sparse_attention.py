@@ -1452,7 +1452,7 @@ def flash_attn_varlen_func(
     )
 
 
-def flash_attn_nsa_stage1(
+def flash_attn_infllmv2_stage1(
     q,
     k,
     v,
