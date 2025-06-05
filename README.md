@@ -210,14 +210,6 @@ All benchmarks were conducted with the following configuration:
 | 131,072 | 2 | Triton NSA | 216.10 | 589.66 | 805.76 | 3.59x |
 | 131,072 | 2 | InfLLMv2 | 158.42 | 468.90 | 627.32 | 4.61x |
 
-#### Performance Summary (Combined Time)
-
-```
-Sequence Length    Batch Size    FlashAttention    InfLLMv2    Speedup
-32,768             8             728.08 ms         463.64 ms   1.57x
-65,536             4             1446.75 ms        523.86 ms   2.76x
-131,072            2             2894.88 ms        627.32 ms   4.61x
-```
 
 ## Citation
 
