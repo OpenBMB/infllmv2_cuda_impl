@@ -1,329 +1,173 @@
-# InfLLM V2: Trainable Sparse Attention for Efficient Long-Context Processing
+# InfLLM V2 CUDA Kernel Implementation: Stage 2 Sparse Attention Computation
 
-InfLLM V2 is a trainable sparse attention implementation that enables Large Language Models (LLMs) to efficiently process long contexts with significantly reduced computational costs for both prefilling and decoding phases. Unlike previous training-free sparse attention approaches that can only accelerate prefilling, InfLLM V2 introduces a novel trainable sparse attention mechanism that achieves 81% attention sparsity while maintaining model quality throughout the entire inference pipeline.
+[English](README.md) | [中文](README_zh.md)
 
-Built upon [FlashAttention](https://github.com/Dao-AILab/flash-attention) 2.4.2, InfLLM V2 provides optimized CUDA kernels with efficient Top-K implementation and integrates seamlessly with existing transformer architectures without introducing additional parameters for attention output.
+This repository contains the optimized CUDA kernel implementation for **InfLLM V2's Stage 2: Sparse Attention Computation**. Our implementation provides high-performance sparse attention kernels that enable Large Language Models (LLMs) to efficiently process long contexts with trainable sparse patterns.
+
+## Overview
+
+InfLLM V2 introduces a novel two-stage approach for efficient long-context processing:
+- **Stage 1**: Block selection and scoring (implementation not included in this repo)
+- **Stage 2**: Sparse attention computation on selected blocks (this implementation)
+
+This CUDA kernel implementation focuses on Stage 2, providing optimized sparse attention computation that:
+- Significantly reduces computational costs for both forward and backward phases
+- Seamlessly integrates with existing transformer architectures
+
+Built upon [FlashAttention](https://github.com/Dao-AILab/flash-attention) 2.4.2, our kernels leverage efficient memory access patterns and optimized Top-K implementations.
 
 ![InfLLM V2 Architecture](assets/infllm-v2.png)
 
-## Key Innovations
-
-### 1. Dynamic Contextual Block Selection
-- **Semantic Kernels**: Fine-grained semantic representations using mean pooling to capture block semantics without token-level memory access
-- **Top-K Blocks Sharing**: Query heads within the same group share selected blocks to minimize memory access
-- **Efficient LSE Approximation**: Novel coarse-grained kernel approach reducing computational costs by factor of s/s_c
-
-### 2. Trainable Sparse Attention Design
+## Kernel Design Features
 - **Token-level Query, Block-level Key-Value**: Avoids training-inference inconsistency during decoding
-- **Parameter-free Mean Pooling**: Maintains semantic space consistency between kernels and token-level keys
-- **No Additional Parameters**: Unlike NSA, doesn't introduce 3x key-value storage costs
-
-### 3. Hardware-Optimized Implementation
-- Kernel size: 32 tokens (optimal balance between precision and efficiency)
-- Stride: 16 tokens (50% overlap for comprehensive semantic coverage)
-- Minimum 16 heads per query group (fully utilizes GPU tensor cores)
-
-## Architecture Overview
-
-InfLLM V2 operates in two stages:
-
-1. **Stage 1: Block Selection**
-   - Computes relevance scores between queries and semantic kernels
-   - Selects top-k blocks with highest relevance
-   - Complexity: O(l²) reduced to O(l/s) with semantic kernels
-
-2. **Stage 2: Sparse Attention Computation**
-   - Performs attention only on selected blocks
-   - Always includes initial tokens and local window
-   - Complexity: O(l) for long sequences
-
-## Advantages Over Existing Methods
-
-| Feature | InfLLM V2 | MoBA | NSA |
-|---------|-----------|------|-----|
-| Decoding Acceleration | ✓ | ✗ | ✓ |
-| No Extra Parameters | ✓ | ✓ | ✗ |
-| Short Sequence Efficiency | ✓ | ✓ | ✗ |
-| Training-Inference Consistency | ✓ | ✗ | ✓ |
-| KV Storage Cost | 1x | 1x | 3x |
+- **Selective Block Attention**: Performs attention only on blocks selected in Stage 1
+- **Linear Complexity**: O(l) complexity for long sequences
 
 ## News
 
 - [2025/06] Initial release of InfLLM V2 with full sparse attention support
-- [2025/06] Integration with MiniCPM4 model family
+- [2025/06] Integration with [MiniCPM4](https://github.com/OpenBMB/MiniCPM) model family
 
-## Features
 
-### Core Capabilities
+## Kernel Implementation Details
+- `infllmv2_sparse_attn_fwd`: Forward pass kernel
+- `infllmv2_sparse_attn_bwd`: Backward pass kernel (for training)
 
-- **81% Attention Sparsity**: Dramatically reduces computational requirements while maintaining model quality
-- **Long-Context Processing**: Efficiently handles extended sequences with O(l) complexity for attention computation
-- **Trainable Sparse Attention**: Unlike training-free approaches, InfLLM V2 learns optimal sparsity patterns during pre-training
-- **Unified Prefilling & Decoding**: Accelerates both phases without training-inference inconsistency
-
-### Technical Features
-
-1. **Semantic Kernel-based Block Selection**
-   - Fine-grained semantic kernels with size p=32 and stride s=16
-   - Mean pooling for parameter-free block representation
-   - Coarse-grained kernels for efficient LSE approximation
-
-2. **Query Group Optimization**
-   - Multiple query heads share the same top-k blocks
-   - Reduces memory access by factor of query group size
-   - Minimum 16 heads per group for tensor core utilization
-
-3. **Adaptive Context Selection**
-   - Always attends to initial tokens (sink tokens)
-   - Maintains local sliding window attention
-   - Degrades to dense attention for short sequences
-
-4. **Efficient Implementation**
-   - Two-stage computation: block selection + sparse attention
-   - Reduces computational complexity from O(l²) to O(l/s) + O(km)
-   - No additional parameters or storage overhead
-
-## Model Architecture
-
-InfLLM V2 introduces a trainable sparse attention mechanism with the following key components:
-
-### Block Partitioning
-- Key-value cache divided into blocks of size m
-- Semantic kernels with size p and stride s for overlap
-- Coarse-grained kernels for LSE approximation
-
-### Relevance Score Computation
-```
-r_kernel(q_i, S_j) = softmax(q_i · Mean(K[j*s:j*s+p]))
-r_block(q_i, B_j) = max{r_kernel(q_i, S_j) | S_j ∩ B_j ≠ ∅}
-```
-
-### Two-Stage Processing
-1. **Block Selection Stage**: Select top-k blocks based on relevance scores
-2. **Attention Stage**: Compute attention only within selected blocks
-
-These design choices enable efficient long-context processing without sacrificing model quality or introducing training-inference inconsistency.
 
 ## Installation
 
 ### Requirements
 
 - PyTorch 1.12+
-- CUDA 11.6+
+- CUDA 11.6+ (with CUDA development toolkit)
 - Python 3.7+
 - Linux operating system
-- Sufficient GPU memory for compilation
+- Sufficient GPU memory for kernel compilation
+- Ninja build system (for faster compilation)
 
-### Install from Source
+### Build from Source
 
 ```bash
-git clone https://github.com/your-org/infllm-v2.git
-cd infllm-v2
+# Clone the repository
+git clone https://github.com/your-org/infllm-v2-cuda.git
+cd infllm-v2-cuda
+
+# Install with CUDA kernel compilation
 pip install -e .
+
+# Or install with specific CUDA architecture
+TORCH_CUDA_ARCH_LIST="8.0;9.0" pip install -e .
 ```
 
 
 ## Usage
 
-### Basic Example
+### CUDA Kernel API
+
+The InfLLM V2 CUDA kernel provides the following main interface for Stage 2 sparse attention computation:
 
 ```python
-import torch
-from infllm_v2 import InfLLMAttention
+from infllm_v2 import infllmv2_sparse_attn_func
 
-# Initialize InfLLM V2 attention
-attention = InfLLMAttention(
-    hidden_size=4096,
-    num_heads=32,
-    num_key_value_heads=8,  # For grouped query attention
-    sparsity_ratio=0.81,
-    max_seq_length=32768,
-    block_size=128,         # Key-value block size (m)
-    kernel_size=32,         # Semantic kernel size (p)
-    kernel_stride=16,       # Semantic kernel stride (s)
-    top_k_blocks=256,       # Number of blocks to select
-    local_window_size=256,  # Local sliding window
-    sink_tokens=64         # Initial tokens always attended
-)
+# Stage 2: Sparse Attention Computation Kernel
+# Inputs:
+#   - q_unpad: Queries tensor (token-level)
+#   - k_unpad, v_unpad: Keys and Values tensors (block-level)
+#   - cu_seqlens_q, cu_seqlens_k: Cumulative sequence lengths
+#   - topk_idx: Selected block indices from Stage 1
+#   - max_seqlen_q, max_seqlen_k: Maximum sequence lengths
+#   - block_window_size: Optional local attention window size
 
-# Forward pass
-output = attention(hidden_states, attention_mask, position_ids)
-```
-
-### Integration with Transformers
-
-```python
-from transformers import AutoModel
-from infllm_v2 import replace_with_infllm_attention
-
-# Load your model
-model = AutoModel.from_pretrained("your-model")
-
-# Replace attention layers with InfLLM V2
-model = replace_with_infllm_attention(
-    model, 
-    sparsity_ratio=0.81,
-    kernel_size=32,
-    kernel_stride=16
+out_unpad = infllmv2_sparse_attn_func(
+    q_unpad, k_unpad, v_unpad,
+    cu_seqlens_q, cu_seqlens_k,
+    topk_idx,  # Block indices selected in Stage 1
+    max_seqlen_q, max_seqlen_k,
+    block_window_size = 0,  # Additional local window for attention
 )
 ```
 
-### Advanced Configuration
+### Kernel Parameters
 
-```python
-from infllm_v2 import InfLLMConfig
+- **q_unpad**: Query tensor in unpadded format (bfloat16)
+- **k_unpad, v_unpad**: Key and Value tensors in unpadded format
+- **topk_idx**: Integer tensor containing selected block indices from Stage 1
+- **block_window_size**: Size of local attention window (0 to disable)
 
-config = InfLLMConfig(
-    # Block partitioning
-    block_size=128,              # Size of key-value blocks
-    kernel_size=32,              # Semantic kernel size
-    kernel_stride=16,            # Semantic kernel stride
-    coarse_kernel_size=128,      # Coarse-grained kernel for LSE approximation
-    coarse_kernel_stride=64,     # Coarse-grained kernel stride
-    
-    # Selection parameters
-    top_k_blocks=256,            # Number of blocks to select per query
-    local_window_size=256,       # Size of local sliding window
-    sink_tokens=64,              # Number of initial tokens to always attend
-    
-    # Query group settings
-    min_heads_per_group=16,      # Minimum heads per query group for tensor core utilization
-    
-    # Performance options
-    use_lse_approximation=True,  # Enable efficient LSE approximation
-    share_blocks_in_group=True   # Share selected blocks within query groups
-)
-```
+### Performance Considerations
 
-### Training with InfLLM V2
-
-```python
-# InfLLM V2 is designed to be trained from scratch
-# The sparse attention patterns are learned during pre-training
-model = YourTransformerModel(
-    attention_class=InfLLMAttention,
-    attention_config=config
-)
-
-# Training proceeds normally - the sparse attention is differentiable
-# through mean pooling operations on semantic kernels
-```
-
-## Performance
-
-### Complexity Analysis
-
-InfLLM V2 significantly reduces computational complexity through its two-stage sparse attention mechanism:
-
-| Operation | Dense Attention | InfLLM V2 Stage 1 | InfLLM V2 Stage 2 |
-|-----------|----------------|-------------------|-------------------|
-| Computation | O(l²) | O(l²/s) | O(km·l) |
-| Memory Access | O(l²) | O(l/s) | O(km) |
-
-Where:
-- `l`: Sequence length
-- `s`: Semantic kernel stride (default: 16)
-- `k`: Number of selected blocks
-- `m`: Block size
-
-For long sequences where `l >> km`, InfLLM V2 reduces computation by factor of `s` (typically 16x reduction).
-
-
-### Memory Usage Comparison
-
-| Context Length | Dense Attention | InfLLM V2 | Memory Reduction | NSA | MoBA |
-|----------------|-----------------|-----------|------------------|-----|------|
-| 8K             | 12.4 GB         | 3.2 GB    | 74%             | 9.6 GB | 3.8 GB |
-| 16K            | 28.6 GB         | 6.1 GB    | 79%             | 18.3 GB | 7.2 GB |
-| 32K            | 64.2 GB         | 11.8 GB   | 82%             | 35.4 GB | 13.9 GB |
-| 64K            | OOM             | 22.4 GB   | -               | OOM | 26.7 GB |
-
-*Measured on A100 80GB GPU with batch size 1, hidden size 4096, 32 heads*
-
-### Key Advantages
-
-1. **No Additional Parameters**: Unlike NSA which requires 3x key-value storage
-2. **Decoding Acceleration**: Unlike MoBA which only accelerates prefilling
-3. **Short Sequence Efficiency**: No overhead for sequences shorter than k blocks
-4. **Training-Inference Consistency**: Token-level queries maintain consistency across phases
+- The kernel automatically handles different GPU architectures (SM80/SM90)
+- Optimized for batch processing with variable sequence lengths
+- Memory efficient through unpadded tensor format
+- Supports bfloat16 precision
 
 ## Supported GPU Architectures
 
 - **SM 80**: A100
 - **SM 90**: H100
 
-## Training Pipeline
+## Performance Benchmarks
 
-InfLLM V2 is designed as a trainable sparse attention mechanism that learns optimal sparsity patterns during pre-training:
+### Performance Comparison: InfLLMv2 vs FlashAttention
 
-### Key Training Features
+All benchmarks were conducted with the following configuration:
+- **GPU**: NVIDIA H100
+- **Head Dimension**: 128
+- **Number of Heads**: 2  
+- **Query Heads**: 32
+- **Block Size**: 64
+- **Selected Blocks**: 64
+- **Attention Type**: Causal
 
-1. **End-to-End Trainable**: Sparse attention patterns are learned alongside model parameters
-2. **Gradient Flow**: Mean pooling ensures gradients flow through semantic kernels
-3. **No Post-Training Adaptation**: Unlike training-free methods, InfLLM V2 is trained from scratch
-4. **Automatic Sparsity Learning**: The model learns which contexts are important through training
+#### Detailed Performance Results
 
-### Integration with Pre-Training
+| Sequence Length | Batch Size | Implementation | Forward (ms) | Backward (ms) | Combined (ms) | Speedup vs FlashAttention |
+|-----------------|------------|----------------|-------------|---------------|---------------|----------------------------|
+| 32,768 | 8 | Flash Attention | 201.46 | 526.62 | 728.08 | 1x |
+| 32,768 | 8 | Triton NSA | 169.11 | 343.82 | 512.93 | 1.42x |
+| 32,768 | 8 | InfLLMv2 | 133.60 | 330.04 | 463.64 | 1.57x |
+| 65,536 | 4 | Flash Attention | 409.29 | 1037.46 | 1446.75 | 1x |
+| 65,536 | 4 | Triton NSA | 181.88 | 469.00 | 650.88 | 2.22x |
+| 65,536 | 4 | InfLLMv2 | 142.31 | 381.55 | 523.86 | 2.76x |
+| 131,072 | 2 | Flash Attention | 831.77 | 2063.11 | 2894.88 | 1x |
+| 131,072 | 2 | Triton NSA | 216.10 | 589.66 | 805.76 | 3.59x |
+| 131,072 | 2 | InfLLMv2 | 158.42 | 468.90 | 627.32 | 4.61x |
 
-```python
-# InfLLM V2 integrates seamlessly into standard pre-training pipelines
-from infllm_v2 import InfLLMTransformer
+#### Performance Summary (Combined Time)
 
-model = InfLLMTransformer(
-    num_layers=32,
-    hidden_size=4096,
-    num_heads=32,
-    num_key_value_heads=8,
-    # InfLLM V2 specific parameters
-    kernel_size=32,
-    kernel_stride=16,
-    top_k_blocks=256
-)
-
-# Standard pre-training loop
-for batch in dataloader:
-    outputs = model(batch)
-    loss = compute_loss(outputs)
-    loss.backward()  # Gradients flow through sparse attention
-    optimizer.step()
+```
+Sequence Length    Batch Size    FlashAttention    InfLLMv2    Speedup
+32,768             8             728.08 ms         463.64 ms   1.57x
+65,536             4             1446.75 ms        523.86 ms   2.76x
+131,072            2             2894.88 ms        627.32 ms   4.61x
 ```
 
-### Progressive Context Extension
+### Key Performance Highlights
 
-InfLLM V2 supports progressive training strategies for extending context length:
-
-1. **Start with shorter sequences** (e.g., 4K tokens)
-2. **Gradually increase context length** as training progresses
-3. **Sparse patterns adapt automatically** to longer contexts
-4. **No architectural changes required** for different context lengths
-
-## Summary
-
-InfLLM V2 represents a significant advancement in sparse attention mechanisms for LLMs:
-
-- **First trainable sparse attention** that accelerates both prefilling and decoding phases
-- **81% sparsity** with minimal quality loss through learned attention patterns
-- **No additional parameters** or storage overhead compared to dense attention
-- **Hardware-optimized implementation** with efficient Top-K selection and LSE approximation
-- **Seamless integration** with existing transformer architectures and training pipelines
-
-By addressing the limitations of previous approaches (MoBA's inability to accelerate decoding, NSA's 3x storage overhead), InfLLM V2 enables practical deployment of long-context LLMs with significant computational savings.
+- **Up to 4.6x speedup** for 128K sequences compared to FlashAttention  
+- Performance gains scale with sequence length and sparsity
+- Memory efficiency enables processing longer sequences on single GPU
 
 ## Citation
 
-If you use InfLLM V2 in your research, please cite:
+If you use the InfLLM V2 CUDA kernels in your research, please cite:
 
 ```bibtex
+@article{minicpm4,
+  title={MiniCPM4: Ultra-Efficient LLMs on End Devices},
+  author={MiniCPM},
+  year={2025}
+}
 ```
 
 ## Acknowledgments
+- [MiniCPM4](https://github.com/OpenBMB/MiniCPM): For model integration and testing
+- [FlashAttention](https://github.com/Dao-AILab/flash-attention): The foundational CUDA kernel architecture we built upon
+- [Block Sparse Attention](https://github.com/mit-han-lab/Block-Sparse-Attention): Inspiration for block-sparse kernel design
 
-- [FlashAttention](https://github.com/Dao-AILab/flash-attention): The foundational codebase we built upon
-- [Block Sparse Attention](https://github.com/mit-han-lab/Block-Sparse-Attention): Inspiration for sparse attention patterns
-- NVIDIA CUTLASS team for high-performance GPU primitives
-- The MiniCPM team for model integration and evaluation
+
 
 ## License
 
-Apache License 2.0
+* 本仓库中代码依照 [Apache-2.0](https://github.com/OpenBMB/MiniCPM/blob/main/LICENSE) 协议开源
 
