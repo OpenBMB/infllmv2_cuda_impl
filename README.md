@@ -43,7 +43,7 @@ The sparse attention stage performs standard attention computation, but only on 
 ## Kernel Implementation Details
 
 ### Stage 1 Kernels
-- `infllmv2_attn_stage1`: Computes relevance scores between compressed query representations and semantic kernels, with LSE approximation and dimension reduction
+- `infllmv2_attn_stage1`: Calculates similarity scores between query tokens and compressed key representations
 - Performs score aggregation across query group dimension (hdim16_reduce)
 - Returns aggregated attention scores for subsequent Top-K selection (selection performed outside the kernel)
 - Support for causal masking and variable sequence lengths
@@ -170,18 +170,6 @@ out_unpad = infllmv2_sparse_attn_func(
 - **topk_idx**: Integer tensor containing selected block indices from Stage 1
 - **block_window_size**: Size of local attention window (0 to disable)
 
-### Design Principles
-
-#### Complexity Analysis
-- **Stage 1**: O(l²) complexity but with reduced constant factor through semantic kernel compression
-- **Stage 2**: O(l) complexity for long sequences through sparse attention
-- Overall computational reduction of approximately 1/s where s is the semantic kernel size
-
-#### Hyper-Parameter Recommendations
-Based on algorithmic effectiveness and hardware constraints:
-- **Semantic Kernel Size**: 32 (balances precision and efficiency)
-- **Stride**: 16 (50% overlap for better coverage)
-- **Query Group Size**: Minimum 16 heads (for efficient GPU tensor core utilization)
 
 ### Performance Considerations
 
