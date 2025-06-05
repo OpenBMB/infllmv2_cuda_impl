@@ -1,38 +1,56 @@
-# InfLLM V2 CUDA Kernel Implementation: Stage 2 Sparse Attention Computation
+# InfLLM V2 CUDA Kernel Implementation: Two-Stage Sparse Attention
 
 [English](README.md) | [中文](README_zh.md)
 
-This repository contains the optimized CUDA kernel implementation for **InfLLM V2's Stage 2: Sparse Attention Computation**. Our implementation provides high-performance sparse attention kernels that enable Large Language Models (LLMs) to efficiently process long contexts with trainable sparse patterns.
+This repository contains the optimized CUDA kernel implementation for **InfLLM V2's Two-Stage Sparse Attention Mechanism**. Our implementation provides high-performance kernels for both Stage 1 (Top-K Context Selection) and Stage 2 (Sparse Attention Computation), enabling Large Language Models (LLMs) to efficiently process long contexts with trainable sparse patterns.
 
 ## Overview
 
 InfLLM V2 introduces a novel two-stage approach for efficient long-context processing:
-- **Stage 1**: Block selection and scoring (implementation not included in this repo)
-- **Stage 2**: Sparse attention computation on selected blocks (this implementation)
+- **Stage 1: Top-K Context Selection**: Block scoring and aggregation using semantic kernels (kernel computes and aggregates scores, selection performed externally)
+- **Stage 2: Sparse Attention Computation**: Attention calculation on selected blocks
 
-This CUDA kernel implementation focuses on Stage 2, providing optimized sparse attention computation that:
-- Significantly reduces computational costs for both forward and backward phases
-- Seamlessly integrates with existing transformer architectures
+This CUDA kernel implementation includes both stages, providing:
+- Optimized relevance score computation and aggregation for Stage 1 (Top-K selection performed externally)
+- Efficient sparse attention on selected blocks for Stage 2
+- Significant reduction in computational costs for both forward and backward phases
+- Seamless integration with existing transformer architectures
 
-Built upon [FlashAttention](https://github.com/Dao-AILab/flash-attention) 2.4.2, our kernels leverage efficient memory access patterns and optimized Top-K implementations.
+Built upon [FlashAttention](https://github.com/Dao-AILab/flash-attention), our kernels leverage efficient memory access patterns and optimized implementations for both stages.
 
 ![InfLLM V2 Architecture](assets/infllm-v2.png)
 
+## Two-Stage Architecture
+
+### Stage 1: Top-K Context Selection
+The Top-K selection stage involves three sequential steps:
+1. **Relevance Score Computation**: Computing scores between query tokens and each semantic kernel (compressed representations of key-value blocks), followed by softmax normalization
+2. **Score Aggregation**: Aggregating relevance scores for each semantic kernel across the query group dimension using dimension reduction (hdim16_reduce)
+3. **Block Selection (Post-processing)**: Selecting the top-K context blocks for each query token based on the aggregated scores
+
+Note: The `infllmv2_attn_stage1` kernel handles steps 1 and 2 (score computation and aggregation). Only step 3 (Top-K selection) is performed outside the kernel.
+
+### Stage 2: Sparse Attention Computation
+The sparse attention stage performs standard attention computation, but only on the blocks selected in Stage 1:
+- Support for both forward and backward passes
+- Efficient memory access through block-sparse patterns
+
 ## Kernel Design Features
 - **Token-level Query, Block-level Key-Value**: Avoids training-inference inconsistency during decoding
+- **Trainable Context Selection**: Semantic kernels updated indirectly through token-level key vector optimization
 - **Selective Block Attention**: Performs attention only on blocks selected in Stage 1
-- **Linear Complexity**: O(l) complexity for long sequences
-
-## News
-
-- [2025/06] Initial release of InfLLM V2 with full sparse attention support
-- [2025/06] Integration with [MiniCPM4](https://github.com/OpenBMB/MiniCPM) model family
-
 
 ## Kernel Implementation Details
-- `infllmv2_sparse_attn_fwd`: Forward pass kernel
-- `infllmv2_sparse_attn_bwd`: Backward pass kernel (for training)
 
+### Stage 1 Kernels
+- `infllmv2_attn_stage1`: Computes relevance scores between compressed query representations and semantic kernels, with LSE approximation and dimension reduction
+- Performs score aggregation across query group dimension (hdim16_reduce)
+- Returns aggregated attention scores for subsequent Top-K selection (selection performed outside the kernel)
+- Support for causal masking and variable sequence lengths
+
+### Stage 2 Kernels
+- `infllmv2_sparse_attn_fwd`: Forward pass kernel for sparse attention
+- `infllmv2_sparse_attn_bwd`: Backward pass kernel for training
 
 ## Installation
 
@@ -51,7 +69,7 @@ Built upon [FlashAttention](https://github.com/Dao-AILab/flash-attention) 2.4.2,
 
 ```bash
 # Clone the repository and use main branch for training
-git clone https://github.com/your-org/infllm_v2_cuda.git
+git clone https://github.com/OpenBMB/infllm_v2_cuda.git
 cd infllm_v2_cuda
 git checkout main
 
@@ -64,7 +82,7 @@ pip install -e .
 
 ```bash
 # Clone the repository and use feature_infer branch for inference
-git clone https://github.com/your-org/infllm_v2_cuda.git
+git clone https://github.com/OpenBMB/infllm_v2_cuda.git
 cd infllm_v2_cuda
 git checkout feature_infer
 
@@ -78,7 +96,43 @@ pip install -e .
 
 ### CUDA Kernel API
 
-The InfLLM V2 CUDA kernel provides the following main interface for Stage 2 sparse attention computation:
+The InfLLM V2 CUDA kernel provides the following interfaces for the two-stage sparse attention:
+
+#### Stage 1: Attention Score Computation and Aggregation (feature_infer branch)
+
+```python
+from infllm_v2 import infllmv2_attn_stage1
+
+# Stage 1: Compute and aggregate relevance scores between queries and semantic kernels
+# This kernel performs:
+#   1. LSE approximation using compressed keys
+#   2. Full attention score computation
+#   3. Score aggregation across query group dimension (hdim16_reduce)
+# Top-K selection must be performed separately on the aggregated scores
+#
+# Inputs:
+#   - q: Query tensor (batch_size * n_heads, seqlen_q, head_dim)
+#   - k: Compressed key tensor representing semantic kernels
+#   - v: Placeholder tensor (not used in score computation)
+#   - cu_seqlens_q, cu_seqlens_k: Cumulative sequence lengths
+#   - max_seqlen_q, max_seqlen_k: Maximum sequence lengths
+
+# Returns aggregated attention scores for subsequent Top-K selection
+aggregated_scores = infllmv2_attn_stage1(
+    q, k, v,
+    cu_seqlens_q=cu_seqlens_q,
+    cu_seqlens_k=cu_seqlens_k,
+    max_seqlen_q=max_seqlen_q,
+    max_seqlen_k=max_seqlen_k,
+    causal=True,  # Apply causal masking
+    return_attn_probs=True  # Return attention scores
+)
+
+# Top-K selection should be performed on the returned aggregated scores
+# (This step is not part of the kernel)
+```
+
+#### Stage 2: Sparse Attention Computation
 
 ```python
 from infllm_v2 import infllmv2_sparse_attn_func
@@ -103,17 +157,38 @@ out_unpad = infllmv2_sparse_attn_func(
 
 ### Kernel Parameters
 
+#### Stage 1 Parameters
+- **q**: Query tensor with shape (batch_size * n_heads, seqlen_q, head_dim)
+- **k**: Compressed key tensor representing semantic kernels
+- **causal**: Whether to apply causal masking
+- **return_attn_probs**: Whether to return attention scores (required for Top-K selection)
+- **Output**: Aggregated attention scores matrix (reduced along query group dimension) for external Top-K selection
+
+#### Stage 2 Parameters
 - **q_unpad**: Query tensor in unpadded format (bfloat16)
 - **k_unpad, v_unpad**: Key and Value tensors in unpadded format
 - **topk_idx**: Integer tensor containing selected block indices from Stage 1
 - **block_window_size**: Size of local attention window (0 to disable)
 
+### Design Principles
+
+#### Complexity Analysis
+- **Stage 1**: O(l²) complexity but with reduced constant factor through semantic kernel compression
+- **Stage 2**: O(l) complexity for long sequences through sparse attention
+- Overall computational reduction of approximately 1/s where s is the semantic kernel size
+
+#### Hyper-Parameter Recommendations
+Based on algorithmic effectiveness and hardware constraints:
+- **Semantic Kernel Size**: 32 (balances precision and efficiency)
+- **Stride**: 16 (50% overlap for better coverage)
+- **Query Group Size**: Minimum 16 heads (for efficient GPU tensor core utilization)
+
 ### Performance Considerations
 
 - The kernel automatically handles different GPU architectures (SM80/SM90)
 - Optimized for batch processing with variable sequence lengths
-- Memory efficient through unpadded tensor format
-- Supports bfloat16 precision
+- Memory efficient through unpadded tensor format and block-sparse patterns
+- Supports bfloat16 precision for both stages
 
 ## Supported GPU Architectures
 
@@ -155,12 +230,6 @@ Sequence Length    Batch Size    FlashAttention    InfLLMv2    Speedup
 65,536             4             1446.75 ms        523.86 ms   2.76x
 131,072            2             2894.88 ms        627.32 ms   4.61x
 ```
-
-### Key Performance Highlights
-
-- **Up to 4.6x speedup** for 128K sequences compared to FlashAttention  
-- Performance gains scale with sequence length and sparsity
-- Memory efficiency enables processing longer sequences on single GPU
 
 ## Citation
 

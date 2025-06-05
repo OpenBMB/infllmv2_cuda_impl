@@ -1,36 +1,56 @@
-# InfLLM V2 CUDA 内核实现：第二阶段稀疏注意力计算
+# InfLLM V2 CUDA 内核实现：两阶段稀疏注意力机制
 
-本仓库包含了 **InfLLM V2 第二阶段：稀疏注意力计算** 的优化 CUDA 内核实现。我们的实现提供了高性能的稀疏注意力内核，使大型语言模型（LLM）能够通过可训练的稀疏模式高效处理长上下文。
+[English](README.md) | [中文](README_zh.md)
+
+本仓库包含了 **InfLLM V2 两阶段稀疏注意力机制** 的优化 CUDA 内核实现。我们的实现为第一阶段（Top-K 上下文选择）和第二阶段（稀疏注意力计算）都提供了高性能内核，使大型语言模型（LLM）能够通过可训练的稀疏模式高效处理长上下文。
 
 ## 概述
 
 InfLLM V2 引入了一种新颖的两阶段方法来高效处理长上下文：
-- **第一阶段**：块选择和评分（本仓库未包含此实现）
-- **第二阶段**：对选定块进行稀疏注意力计算（本实现）
+- **第一阶段：Top-K 上下文选择**：使用语义内核进行块评分和聚合（内核计算和聚合分数，选择在外部执行）
+- **第二阶段：稀疏注意力计算**：对选定块进行注意力计算
 
-这个 CUDA 内核实现专注于第二阶段，提供优化的稀疏注意力计算：
+这个 CUDA 内核实现包含两个阶段，提供：
+- 第一阶段优化的相关性分数计算和聚合（Top-K 选择在外部执行）
+- 第二阶段对选定块的高效稀疏注意力
 - 显著降低前向和反向阶段的计算成本
 - 与现有 Transformer 架构无缝集成
 
-基于 [FlashAttention](https://github.com/Dao-AILab/flash-attention) 2.4.2 构建，我们的内核利用了高效的内存访问模式和优化的 Top-K 实现。
+基于 [FlashAttention](https://github.com/Dao-AILab/flash-attention) 构建，我们的内核在两个阶段都利用了高效的内存访问模式和优化实现。
 
 ![InfLLM V2 架构](assets/infllm-v2.png)
 
+## 两阶段架构
+
+### 第一阶段：Top-K 上下文选择
+Top-K 选择阶段包含三个顺序步骤：
+1. **相关性分数计算**：计算查询令牌与每个语义内核（键值块的压缩表示）之间的分数，然后进行 softmax 归一化
+2. **分数聚合**：使用维度缩减（hdim16_reduce）在查询组维度上聚合每个语义内核的相关性分数
+3. **块选择（后处理）**：基于聚合分数为每个查询令牌选择 top-K 上下文块
+
+注意：`infllmv2_attn_stage1` 内核处理步骤 1 和 2（分数计算和聚合）。只有步骤 3（Top-K 选择）在内核外部执行。
+
+### 第二阶段：稀疏注意力计算
+稀疏注意力阶段执行标准注意力计算，但仅在第一阶段选择的块上进行：
+- 支持前向和反向传递
+- 通过块稀疏模式实现高效内存访问
+
 ## 内核设计特性
 - **Token 级别查询，块级别键值**：避免解码时的训练-推理不一致性
+- **可训练的上下文选择**：通过令牌级键向量优化间接更新语义内核
 - **选择性块注意力**：仅对第一阶段选择的块执行注意力计算
-- **线性复杂度**：对于长序列具有 O(l) 复杂度
-
-## 新闻
-
-- [2025/06] InfLLM V2 初始版本发布，支持完整的稀疏注意力
-- [2025/06] 与 [MiniCPM4](https://github.com/OpenBMB/MiniCPM) 模型系列集成
-
 
 ## 内核实现细节
-- `infllmv2_sparse_attn_fwd`：前向传递内核
-- `infllmv2_sparse_attn_bwd`：反向传递内核（用于训练）
 
+### 第一阶段内核
+- `infllmv2_attn_stage1`：计算压缩查询表示与语义内核之间的相关性分数，包含 LSE 近似和维度缩减
+- 执行查询组维度上的分数聚合（hdim16_reduce）
+- 返回聚合的注意力分数供后续 Top-K 选择使用（选择在内核外部执行）
+- 支持因果掩码和可变序列长度
+
+### 第二阶段内核
+- `infllmv2_sparse_attn_fwd`：稀疏注意力的前向传递内核
+- `infllmv2_sparse_attn_bwd`：用于训练的反向传递内核
 
 ## 安装
 
@@ -76,7 +96,43 @@ pip install -e .
 
 ### CUDA 内核 API
 
-InfLLM V2 CUDA 内核为第二阶段稀疏注意力计算提供以下主要接口：
+InfLLM V2 CUDA 内核为两阶段稀疏注意力提供以下接口：
+
+#### 第一阶段：注意力分数计算和聚合（feature_infer 分支）
+
+```python
+from infllm_v2 import infllmv2_attn_stage1
+
+# 第一阶段：计算和聚合查询与语义内核之间的相关性分数
+# 此内核执行：
+#   1. 使用压缩键的 LSE 近似
+#   2. 完整注意力分数计算
+#   3. 查询组维度上的分数聚合（hdim16_reduce）
+# Top-K 选择必须在聚合分数上单独执行
+#
+# 输入：
+#   - q: 查询张量 (batch_size * n_heads, seqlen_q, head_dim)
+#   - k: 表示语义内核的压缩键张量
+#   - v: 占位符张量（在分数计算中不使用）
+#   - cu_seqlens_q, cu_seqlens_k: 累积序列长度
+#   - max_seqlen_q, max_seqlen_k: 最大序列长度
+
+# 返回聚合的注意力分数供后续 Top-K 选择使用
+aggregated_scores = infllmv2_attn_stage1(
+    q, k, v,
+    cu_seqlens_q=cu_seqlens_q,
+    cu_seqlens_k=cu_seqlens_k,
+    max_seqlen_q=max_seqlen_q,
+    max_seqlen_k=max_seqlen_k,
+    causal=True,  # 应用因果掩码
+    return_attn_probs=True  # 返回注意力分数
+)
+
+# Top-K 选择应该在返回的聚合分数上执行
+# （此步骤不是内核的一部分）
+```
+
+#### 第二阶段：稀疏注意力计算
 
 ```python
 from infllm_v2 import infllmv2_sparse_attn_func
@@ -101,17 +157,38 @@ out_unpad = infllmv2_sparse_attn_func(
 
 ### 内核参数
 
+#### 第一阶段参数
+- **q**：查询张量，形状为 (batch_size * n_heads, seqlen_q, head_dim)
+- **k**：表示语义内核的压缩键张量
+- **causal**：是否应用因果掩码
+- **return_attn_probs**：是否返回注意力分数（Top-K 选择所需）
+- **输出**：聚合的注意力分数矩阵（沿查询组维度缩减）供外部 Top-K 选择使用
+
+#### 第二阶段参数
 - **q_unpad**：未填充格式的查询张量（bfloat16）
 - **k_unpad, v_unpad**：未填充格式的键和值张量
 - **topk_idx**：包含第一阶段选择的块索引的整数张量
 - **block_window_size**：局部注意力窗口大小（0 表示禁用）
 
+### 设计原则
+
+#### 复杂度分析
+- **第一阶段**：O(l²) 复杂度，但通过语义内核压缩降低了常数因子
+- **第二阶段**：通过稀疏注意力实现长序列的 O(l) 复杂度
+- 总体计算量减少约 1/s，其中 s 是语义内核大小
+
+#### 超参数推荐
+基于算法效果和硬件约束：
+- **语义内核大小**：32（平衡精度和效率）
+- **步长**：16（50% 重叠以获得更好的覆盖）
+- **查询组大小**：最少 16 个头（为了高效利用 GPU 张量核心）
+
 ### 性能考虑
 
 - 内核自动处理不同的 GPU 架构（SM80/SM90）
 - 针对变长序列的批处理进行了优化
-- 通过未填充张量格式实现内存高效
-- 支持 bfloat16 精度
+- 通过未填充张量格式和块稀疏模式实现内存高效
+- 两个阶段都支持 bfloat16 精度
 
 ## 支持的 GPU 架构
 
@@ -154,12 +231,6 @@ out_unpad = infllmv2_sparse_attn_func(
 131,072         2         2894.88 ms        627.32 ms   4.61x
 ```
 
-### 关键性能亮点
-
-- 对于 128K 序列，相比 FlashAttention **最高可达 4.6 倍加速**
-- 性能提升随序列长度和稀疏度增加而扩大
-- 内存效率使得在单个 GPU 上处理更长序列成为可能
-
 ## 引用
 
 如果您在研究中使用了 InfLLM V2 CUDA 内核，请引用：
@@ -173,7 +244,7 @@ out_unpad = infllmv2_sparse_attn_func(
 ```
 
 ## 致谢
-- [MiniCPM](https://github.com/OpenBMB/MiniCPM): 团队的模型集成和测试
+- [MiniCPM4](https://github.com/OpenBMB/MiniCPM)：模型集成和测试
 - [FlashAttention](https://github.com/Dao-AILab/flash-attention)：我们构建的基础 CUDA 内核架构
 - [Block Sparse Attention](https://github.com/mit-han-lab/Block-Sparse-Attention)：块稀疏内核设计的灵感来源
 
