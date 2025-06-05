@@ -1,4 +1,4 @@
-# InfLLM V2 CUDA Kernel Implementation: Two-Stage Sparse Attention
+# InfLLM V2 CUDA Kernel Implementation
 
 [English](README.md) | [中文](README_zh.md)
 

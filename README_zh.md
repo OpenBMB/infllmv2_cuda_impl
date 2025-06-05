@@ -1,4 +1,4 @@
-# InfLLM V2 CUDA 内核实现：两阶段稀疏注意力机制
+# InfLLM V2 CUDA 内核实现
 
 [English](README.md) | [中文](README_zh.md)
 
