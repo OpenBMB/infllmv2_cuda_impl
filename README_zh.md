@@ -45,16 +45,30 @@ InfLLM V2 引入了一种新颖的两阶段方法来高效处理长上下文：
 
 ### 从源码构建
 
+#### 训练环境安装（main 分支）
+
 ```bash
-# 克隆仓库
-git clone https://github.com/your-org/infllm-v2-cuda.git
-cd infllm-v2-cuda
+# 克隆仓库并切换到 main 分支用于训练
+git clone https://github.com/OpenBMB/infllm_v2_cuda.git
+cd infllm_v2_cuda
+git checkout main
 
 # 安装并编译 CUDA 内核
 pip install -e .
 
-# 或者指定 CUDA 架构进行安装
-TORCH_CUDA_ARCH_LIST="8.0;9.0" pip install -e .
+```
+
+#### Hugging Face 推理安装（feature_infer 分支）
+
+```bash
+# 克隆仓库并切换到 feature_infer 分支用于推理
+git clone https://github.com/OpenBMB/infllm_v2_cuda.git
+cd infllm_v2_cuda
+git checkout feature_infer
+
+# 安装并编译 CUDA 内核
+pip install -e .
+
 ```
 
 

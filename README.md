@@ -47,16 +47,30 @@ Built upon [FlashAttention](https://github.com/Dao-AILab/flash-attention) 2.4.2,
 
 ### Build from Source
 
+#### For Training (main branch)
+
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/infllm-v2-cuda.git
-cd infllm-v2-cuda
+# Clone the repository and use main branch for training
+git clone https://github.com/your-org/infllm_v2_cuda.git
+cd infllm_v2_cuda
+git checkout main
 
 # Install with CUDA kernel compilation
 pip install -e .
 
-# Or install with specific CUDA architecture
-TORCH_CUDA_ARCH_LIST="8.0;9.0" pip install -e .
+```
+
+#### For Hugging Face Inference (feature_infer branch)
+
+```bash
+# Clone the repository and use feature_infer branch for inference
+git clone https://github.com/your-org/infllm_v2_cuda.git
+cd infllm_v2_cuda
+git checkout feature_infer
+
+# Install with CUDA kernel compilation
+pip install -e .
+
 ```
 
 
@@ -169,5 +183,5 @@ If you use the InfLLM V2 CUDA kernels in your research, please cite:
 
 ## License
 
-* 本仓库中代码依照 [Apache-2.0](https://github.com/OpenBMB/MiniCPM/blob/main/LICENSE) 协议开源
+* This repository is released under the [Apache-2.0](https://github.com/OpenBMB/MiniCPM/blob/main/LICENSE) License. 
 
