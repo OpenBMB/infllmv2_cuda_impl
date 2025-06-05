@@ -309,11 +309,12 @@ class InfLLMv2SparseAttnFun(torch.autograd.Function):
 def infllmv2_sparse_attn_func(
     q, k, v,
     cu_seqlens_q, cu_seqlens_k,
-    head_mask_type,
-    streaming_info,
     topk_idx,  # Changed from base_blockmask to topk_idx
     max_seqlen_q_, max_seqlen_k_,
-    p_dropout,
+    block_window_size=0,
+    p_dropout=0,
+    head_mask_type=None,
+    streaming_info=None,
     deterministic=False,
     softmax_scale=None,
     is_causal=False,
@@ -322,8 +323,18 @@ def infllmv2_sparse_attn_func(
     use_checkpoint=False,
     window_size_left=-1,
     window_size_right=-1,
-    block_window_size=0,
+   
 ):
+    # If head_mask_type is None, create default values based on nheads_k
+    if head_mask_type is None:
+        nheads_k = k.shape[-2] if len(k.shape) == 3 else k.shape[-3]
+        head_mask_type = torch.tensor([1] * nheads_k, device=k.device, dtype=torch.int32)
+    
+    # If streaming_info is None, create default values
+    if streaming_info is None:
+        nheads_k = k.shape[-2] if len(k.shape) == 3 else k.shape[-3]
+        streaming_info = torch.tensor([0, 0] * nheads_k, device=k.device, dtype=torch.int32)
+    
     head_mask_type, blocksparse_head_num = replace_ones_with_count(head_mask_type)
     if topk_idx is not None:
         assert topk_idx.shape[0] == blocksparse_head_num
