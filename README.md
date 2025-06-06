@@ -69,7 +69,7 @@ The sparse attention stage performs standard attention computation, but only on 
 
 ```bash
 # Clone the repository and use main branch for training
-git clone https://github.com/OpenBMB/infllm_v2_cuda.git
+git clone https://github.com/OpenBMB/infllm_v2_cuda.git --recursive
 cd infllm_v2_cuda
 git checkout main
 
@@ -82,7 +82,7 @@ pip install -e .
 
 ```bash
 # Clone the repository and use feature_infer branch for inference
-git clone https://github.com/OpenBMB/infllm_v2_cuda.git
+git clone https://github.com/OpenBMB/infllm_v2_cuda.git --recursive
 cd infllm_v2_cuda
 git checkout feature_infer
 
