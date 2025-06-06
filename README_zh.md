@@ -68,7 +68,7 @@ Top-K 选择阶段包含三个顺序步骤：
 
 ```bash
 # 克隆仓库并切换到 main 分支用于训练
-git clone https://github.com/OpenBMB/infllm_v2_cuda.git
+git clone https://github.com/OpenBMB/infllm_v2_cuda.git --recursive
 cd infllm_v2_cuda
 git checkout main
 
@@ -81,7 +81,7 @@ pip install -e .
 
 ```bash
 # 克隆仓库并切换到 feature_infer 分支用于推理
-git clone https://github.com/OpenBMB/infllm_v2_cuda.git
+git clone https://github.com/OpenBMB/infllm_v2_cuda.git --recursive
 cd infllm_v2_cuda
 git checkout feature_infer
 
