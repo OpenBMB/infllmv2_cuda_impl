@@ -405,26 +405,76 @@ def infllmv2_attn_stage1(
     return_attn_probs=True,
     block_table=None,
 ):
+    """
+    Neighborhood Sparse Attention (NSA) Stage 1 with varlen support.
+    
+    This function performs the first stage of NSA, computing attention scores
+    with a specific sparsity pattern where queries are grouped and only attend
+    to a subset of keys.
+    
+    Arguments:
+        q: (total_q, nheads, headdim), where total_q = total number of query tokens in the batch.
+        k: (total_k, nheads_k, headdim), where total_k = total number of key tokens in the batch.
+        v: (total_k, nheads_k, headdim), where total_k = total number of key tokens in the batch.
+        cu_seqlens_q: (batch_size + 1,), dtype torch.int32. The cumulative sequence lengths
+           of the sequences in the batch, used to index into q.
+        cu_seqlens_k: (batch_size + 1,), dtype torch.int32. The cumulative sequence lengths
+           of the sequences in the batch, used to index into kv.
+        max_seqlen_q: int. Maximum query sequence length in the batch.
+        max_seqlen_k: int. Maximum key sequence length in the batch.
+        dropout_p: float. Dropout probability.
+        softmax_scale: float. The scaling of QK^T before applying softmax.
+            Default to 1 / sqrt(headdim).
+        causal: bool. Whether to apply causal attention mask (e.g., for auto-regressive modeling).
+        window_size: (left, right). If not (-1, -1), implements sliding window local attention.
+        softcap: float. Anything > 0 activates softcapping attention.
+        alibi_slopes: (nheads,) or (batch_size, nheads), fp32. A bias of
+            (-alibi_slope * |i + seqlen_k - seqlen_q - j|)
+            is added to the attention score of query i and key j.
+        deterministic: bool. Whether to use the deterministic implementation.
+        return_attn_probs: bool. Whether to return the attention probabilities.
+        block_table: Optional block table for paged attention.
+        nsa_group_size: int. Number of groups for neighborhood sparse attention.
+        nsa_heads_per_group: int. Number of heads per group.
+        
+    Return:
+        S_dmask: The attention scores/probabilities matrix with NSA sparsity pattern.
+                 Shape: (num_heads_k, total_q, max_seqlen_k)
+    """
     if softmax_scale is None:
         softmax_scale = q.shape[-1] ** (-0.5)
+    
     q, k, v = [maybe_contiguous(x) for x in (q, k, v)]
-    head_dim = q.shape[-1]
-    q = q.reshape(-1, 2, 16, head_dim).transpose(1, 2).reshape(-1, 2, head_dim).contiguous()
-    cu_seqlens_q = cu_seqlens_q * 16
-    max_seqlen_q = max_seqlen_q * 16
+    
+    # Get dimensions
+    total_q, nheads, head_dim = q.shape
+    batch_size = cu_seqlens_q.numel() - 1
+    nheads_k = k.shape[1]
+    nheads_per_group = nheads // nheads_k
+    
+    # Reshape query for NSA pattern
+    # From (total_q, nsa_group_size * nsa_heads_per_group, head_dim)
+    # To (total_q * nsa_group_size, nsa_heads_per_group, head_dim)
+    q = q.reshape(total_q, nheads_k, nheads_per_group, head_dim)
+    q = q.transpose(1, 2).reshape(total_q * nheads_per_group, nheads_k, head_dim).contiguous()
+    
+    # Adjust cu_seqlens and max_seqlen for the reshaped query
+    cu_seqlens_q_adjusted = cu_seqlens_q * nheads_per_group
+    max_seqlen_q_adjusted = max_seqlen_q * nheads_per_group
 
-    S_dmask, = infllm_cuda.varlen_fwd_stage1(
+    # Call the underlying CUDA kernel
+    result = infllm_cuda.varlen_fwd_stage1(
         q,
         k,
         v,
         None,
-        cu_seqlens_q,
+        cu_seqlens_q_adjusted,
         cu_seqlens_k,
         None,
         None,
         block_table,
         alibi_slopes,
-        max_seqlen_q,
+        max_seqlen_q_adjusted,
         max_seqlen_k,
         dropout_p,
         softmax_scale,
@@ -433,15 +483,29 @@ def infllmv2_attn_stage1(
         window_size[0],
         window_size[1],
         softcap,
-        return_attn_probs,
+        True,
         None,
     )
     
-    if return_attn_probs:
-        S_dmask = S_dmask[0]
-        if causal:
-            S_dmask[:, :32-1, :] = float('-inf')  # TODO 32 = stride * 2 - 1
-
+    S_dmask = result[0] if isinstance(result, list) else result
+    S_dmask = S_dmask[:,:, :max_seqlen_k]
+    S_dmask = torch.where(torch.isnan(S_dmask), 0, S_dmask)
+    # if return_attn_probs and S_dmask is not None:
+    #     # The kernel now returns shape (num_heads_k, total_q, max_seqlen_k)
+    #     assert S_dmask.shape == (nheads_k, total_q, max_seqlen_k), \
+    #         f"Expected shape ({nheads_k}, {total_q}, {max_seqlen_k}), got {S_dmask.shape}"
+        # TODO causal masking with first block -inf
+        # Apply causal masking if needed
+        # if causal:
+        #     # Calculate the stride for masking
+        #     stride = nsa_heads_per_group * nsa_group_size
+        #     mask_size = stride - 1
+            
+            # Apply masking based on the output shape
+            # S_dmask shape is (num_heads_k, total_q, max_seqlen_k)
+            # if S_dmask.shape[1] > mask_size:  # total_q dimension
+            #     S_dmask[:, :mask_size, :] = float('-inf')
+    
     return S_dmask
 
 

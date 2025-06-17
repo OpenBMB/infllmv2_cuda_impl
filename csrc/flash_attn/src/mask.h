@@ -219,7 +219,8 @@ struct Mask {
     __forceinline__ __device__ void apply_mask_stage1(Tensor<Engine, Layout> &tensor_,
                                                const int col_idx_offset_,
                                                const int row_idx_offset,
-                                               const int warp_row_stride) {
+                                               const int warp_row_stride,
+                                               const int stride = 16) {
         static_assert(!(Causal_mask && Is_local), "Cannot be both causal and local");
         static_assert(Layout::rank == 3, "Only support 3D Tensor");
         static_assert(decltype(size<0>(tensor_))::value == 4, "First dimension must be 4");
@@ -261,8 +262,9 @@ struct Mask {
                         
                         const int orig_row_idx = row_idx / this->m_block_dim;
 
-                        const int col_idx_limit_left = 0;
-                        const int col_idx_limit_right = std::min(max_seqlen_k, (orig_row_idx - /*TODO stride=*/16 + 1) / /*TODO stride=*/16 + window_size_right);
+                        // 计算左边界，使用与右边界类似的基于stride的逻辑
+                        const int col_idx_limit_left = std::max(0, (orig_row_idx - stride + 1) / stride - window_size_left);
+                        const int col_idx_limit_right = std::min(max_seqlen_k, (orig_row_idx - stride + 1) / stride + window_size_right);
                         #pragma unroll
                         for (int nj = 0; nj < size<1, 1>(tensor); ++nj) {
                             const int col_idx_base = col_idx_offset + nj * 8;

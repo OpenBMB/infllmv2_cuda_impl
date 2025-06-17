@@ -1233,8 +1233,18 @@ inline __device__ void compute_attn_1rowblock_splitkv_stage1(const Params &param
           + (n_block_max - 1) * kBlockN * params.k_row_stride + (bidh / params.h_h_k_ratio) * params.k_head_stride
         : block_table[block_table_idx] * params.k_batch_stride + block_table_offset * params.k_row_stride + (bidh / params.h_h_k_ratio) * params.k_head_stride;
 
-    const index_t row_offset_p = ((bidb * params.h + bidh) * params.seqlen_q_rounded/16 // TODO 16 is m_block_dim
-        + m_block * kBlockM/16) * params.seqlen_k_rounded + (n_block_max - 1) * kBlockN;
+    // const index_t row_offset_p = ((bidb * params.h + bidh) * params.seqlen_q_rounded/16 // TODO 16 is m_block_dim
+    //     + m_block * kBlockM/16) * params.seqlen_k_rounded + (n_block_max - 1) * kBlockN;
+    // 获取当前 batch 在 total_query 中的起始位置
+    const index_t query_offset_in_total = binfo.sum_s_q == -1 
+        ? bidb * params.seqlen_q  // 固定长度序列
+        : binfo.sum_s_q;          // 变长序列，已经是累积位置
+
+    // 计算 P 矩阵的偏移
+    const index_t row_offset_p = (bidh * params.total_q/16  // head 偏移
+        + (query_offset_in_total + m_block * kBlockM)/16) * params.seqlen_k_rounded  // query 偏移
+        + (n_block_max - 1) * kBlockN;  // key 偏移
+
 
     Tensor mQ = make_tensor(make_gmem_ptr(reinterpret_cast<Element*>(params.q_ptr) + binfo.q_offset(params.q_batch_stride, params.q_row_stride, bidb)),
                             make_shape(binfo.actual_seqlen_q, params.h, params.d),

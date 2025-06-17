@@ -934,7 +934,8 @@ mha_varlen_fwd_stage1(at::Tensor &q,  // total_q x num_heads x head_size, total_
     at::Tensor p;
     // Only return softmax if there's dropout to reduce compilation time
     if (return_softmax) {
-        p = torch::empty({ batch_size, num_heads, seqlen_q_rounded/16, seqlen_k_rounded }, opts); // TODO 16 is m_block_dim
+        // Return tensor with shape (num_heads_k, total_q, max_seqlen_k)
+        p = torch::full({ num_heads_k, total_q / 16, seqlen_k_rounded }, 0, opts);
     }
     else {
         p = torch::empty({ 0 }, opts);
