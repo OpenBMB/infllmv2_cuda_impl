@@ -151,26 +151,25 @@ class bwdIterator{
     }
 
     __device__ int max_no_larger(int target) const {
-        return target;
         if (blockmask_ptr == nullptr) return target;
         if(max_block_idx == 0){
             return -1;
         };
         
-        // Window check for backward pass
-        if (block_window_size > 0) {
-            // Calculate k position for current step
-            int k_idx = loop_step_idx * n_block_dim;
-            int q_idx = target * m_block_dim;
-            auto round_to_multiple = [](int x, int m) { return (x + m - 1) / m * m; };
+        // // Window check for backward pass
+        // if (block_window_size > 0) {
+        //     // Calculate k position for current step
+        //     int k_idx = loop_step_idx * n_block_dim;
+        //     int q_idx = target * m_block_dim;
+        //     auto round_to_multiple = [](int x, int m) { return (x + m - 1) / m * m; };
             
-            // Check if target is within window (from k position)
-            bool is_in_window = (k_idx >= q_idx - (block_window_size * n_block_dim) && 
-                                k_idx <= round_to_multiple(q_idx, n_block_dim));
-            if (is_in_window) {
-                return target;
-            }
-        }
+        //     // Check if target is within window (from k position)
+        //     bool is_in_window = (k_idx >= q_idx - (block_window_size * n_block_dim) && 
+        //                         k_idx <= round_to_multiple(q_idx, n_block_dim));
+        //     if (is_in_window) {
+        //         return target;
+        //     }
+        // }
         
         // 目标值不能超过最大块索引
         target = min(target, max_block_idx - 1);
