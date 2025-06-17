@@ -321,13 +321,14 @@ struct Flash_bwd_kernel_traits : public Base {
         make_tiled_copy(Copy_Atom<AutoVectorizingCopyWithAssumedAlignment<128>, elem_type>{},
                         GmemLayoutAtom{},
                         Layout<Shape < _1, _8>>{}));  // Val layout, 8 vals per store
-    using GmemLayoutAtomdQaccum = std::conditional_t<
-        kBlockKSmem == 32,
-        Layout<Shape <_32, _8>,  // Thread layout, 8 threads per row
-               Stride< _8, _1>>,
-        Layout<Shape <_16, _16>,  // Thread layout, 16 threads per row
-               Stride< _16, _1>>
-    >;
+    // using GmemLayoutAtomdQaccum = std::conditional_t<
+    //     kBlockKSmem == 32,
+    //     Layout<Shape <_32, _8>,  // Thread layout, 8 threads per row
+    //            Stride< _8, _1>>,
+    //     Layout<Shape <_16, _16>,  // Thread layout, 16 threads per row
+    //            Stride< _16, _1>>
+    // >;
+    using GmemLayoutAtomdQaccum = Layout<Shape<_16, _8>, Stride<_8, _1>>;
     using GmemTiledCopydQaccum = decltype(
         make_tiled_copy(Copy_Atom<AutoVectorizingCopyWithAssumedAlignment<128>, ElementAccum>{},
                         GmemLayoutAtomdQaccum{},
@@ -335,8 +336,8 @@ struct Flash_bwd_kernel_traits : public Base {
 
     using GmemTiledCopydQaccumAtomicAdd = decltype(
         make_tiled_copy(Copy_Atom<AutoVectorizingCopyWithAssumedAlignment<128>, ElementAccum>{},
-                        Layout<Shape <_8, _32>,  // Thread layout, 8 threads per row
-                               Stride<_32, _1>>{},
+                        Layout<Shape <_8, _16>,  // Thread layout, 8 threads per row
+                               Stride<_16, _1>>{},
                         Layout<Shape < _1, _1>>{}));  // Val layout, 1 val per store
 
 };

@@ -1281,6 +1281,7 @@ mha_varlen_bwd(const at::Tensor &dout,  // total_q x num_heads, x head_size
                int window_size_right,
                const float softcap,
                const bool deterministic,
+               c10::optional<at::Tensor> &col_blockmask_, 
                c10::optional<at::Generator> gen_,
                c10::optional<at::Tensor> &rng_state) {
 
@@ -1297,6 +1298,14 @@ mha_varlen_bwd(const at::Tensor &dout,  // total_q x num_heads, x head_size
     bool is_sm8x = cc_major == 8 && cc_minor >= 0;
     bool is_sm80 = cc_major == 8 && cc_minor == 0;
     bool is_sm90 = cc_major == 9 && cc_minor == 0;
+    const bool has_blockmask = col_blockmask_.has_value();
+    at::Tensor col_blockmask;
+    if (has_blockmask) {
+        col_blockmask = col_blockmask_.value();
+    }
+    if(has_blockmask){
+        TORCH_CHECK(col_blockmask.dtype() == torch::kInt64, "col_blockmask must have dtype int64");
+    }
     TORCH_CHECK(is_sm90 || is_sm8x, "FlashAttention only supports Ampere GPUs or newer.");
     // We will support Turing in the near future
     // TORCH_CHECK(is_sm90 || is_sm8x || is_sm75, "FlashAttention only supports Turing GPUs or newer.");
@@ -1319,6 +1328,9 @@ mha_varlen_bwd(const at::Tensor &dout,  // total_q x num_heads, x head_size
     CHECK_DEVICE(q); CHECK_DEVICE(k); CHECK_DEVICE(v);
     CHECK_DEVICE(out); CHECK_DEVICE(dout); CHECK_DEVICE(softmax_lse);
     CHECK_DEVICE(cu_seqlens_q); CHECK_DEVICE(cu_seqlens_k);
+    if(has_blockmask){
+        CHECK_DEVICE(col_blockmask);
+    }
 
     TORCH_CHECK(q.stride(-1) == 1, "Input tensor must have contiguous last dimension");
     TORCH_CHECK(k.stride(-1) == 1, "Input tensor must have contiguous last dimension");
@@ -1327,6 +1339,7 @@ mha_varlen_bwd(const at::Tensor &dout,  // total_q x num_heads, x head_size
     TORCH_CHECK(dout.stride(-1) == 1, "dout tensor must have contiguous last dimension");
     CHECK_CONTIGUOUS(cu_seqlens_q);
     CHECK_CONTIGUOUS(cu_seqlens_k);
+    
 
     const auto sizes = q.sizes();
 
@@ -1360,6 +1373,14 @@ mha_varlen_bwd(const at::Tensor &dout,  // total_q x num_heads, x head_size
     CHECK_SHAPE(dout, total_q, num_heads, head_size);
     CHECK_SHAPE(cu_seqlens_q, batch_size + 1);
     CHECK_SHAPE(cu_seqlens_k, batch_size + 1);
+    if(has_blockmask){
+        CHECK_CONTIGUOUS(col_blockmask);
+        // Last dimension should now be the number of uint64s needed to represent the original blocks
+        int blocks_per_uint64 = 64;  // 64 bits per uint64
+        int m_blocks = total_q / 16;
+        int uint64_per_row = (m_blocks + blocks_per_uint64 - 1) / blocks_per_uint64;
+        CHECK_SHAPE(col_blockmask, num_heads_k, round_multiple(max_seqlen_k, 64) / 64, uint64_per_row);
+    }
 
     at::Tensor dq, dk, dv;
     if (dq_.has_value()) {
@@ -1458,6 +1479,17 @@ mha_varlen_bwd(const at::Tensor &dout,  // total_q x num_heads, x head_size
     params.dq_accum_split_stride = !deterministic ? 0 : dq_accum.stride(0);
     params.total_q = total_q;
 
+    if(has_blockmask){
+        params.blockmask = static_cast<uint64_t*>(col_blockmask.data_ptr());
+        params.m_block_dim = 16;
+        params.n_block_dim = 64;
+        params.num_blocks_m = total_q / 16;
+        params.num_blocks_n = round_multiple(max_seqlen_k, 64) / 64;
+        // params.block_window_size = block_window_size;
+    }
+    else {
+        params.blockmask = nullptr;
+    }
     auto launch = &run_mha_bwd;
 
     auto gen = at::get_generator_or_default<at::CUDAGeneratorImpl>(
