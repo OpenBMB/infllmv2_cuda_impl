@@ -135,7 +135,7 @@ aggregated_scores = infllmv2_attn_stage1(
 #### Stage 2: Sparse Attention Computation
 
 ```python
-from infllm_v2 import infllmv2_sparse_attn_func
+from infllm_v2 import infllmv2_attn_varlen_func
 
 # Stage 2: Sparse Attention Computation Kernel
 # Inputs:
@@ -146,7 +146,7 @@ from infllm_v2 import infllmv2_sparse_attn_func
 #   - max_seqlen_q, max_seqlen_k: Maximum sequence lengths
 #   - block_window_size: Optional local attention window size
 
-out_unpad = infllmv2_sparse_attn_func(
+out_unpad = infllmv2_attn_varlen_func(
     q_unpad, k_unpad, v_unpad,
     cu_seqlens_q, cu_seqlens_k,
     topk_idx,  # Block indices selected in Stage 1

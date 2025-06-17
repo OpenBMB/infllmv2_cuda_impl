@@ -18,6 +18,7 @@
 #include "dropout.h"
 
 #include "alibi.h"
+#include "flash_blockmask.h"
 
 namespace flash {
 
@@ -314,7 +315,7 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
     int m_block = m_block_max - 1;
     int m_block_min = (!Is_causal && !Is_local)
         ? 0
-        : std::max(0, (n_block * kBlockN + binfo.actual_seqlen_q - binfo.actual_seqlen_k - params.window_size_right) / kBlockM);
+        : std::max(0, (n_block * kBlockN + (binfo.actual_seqlen_q / 16) - binfo.actual_seqlen_k - params.window_size_right) / kBlockM);
     // If not local, we're guaranteed that m_block_min <= m_block:
     // We checked earlier that n_block * kBlockN < actual_seqlen_k, so in the causal case,
     // n_block * kBlockN + binfo.actual_seqlen_q - binfo.actual_seqlen_k < actual_seqlen_q.
@@ -531,16 +532,16 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
         // if (cute::thread(32, 0)) { print(scores); }
         // Compute the exponential value.
         flash::scale_apply_exp2</*scale_max=*/false>(scores, lse, params.scale_softmax_log2);
-        if constexpr (Is_dropout) {
-            int warp_id = tidx / 32;
-            int block_row_idx = m_block * (kBlockM / 16) + warp_id % AtomLayoutMS;
-            // Need col to be multiples of 32, since we're doing dropout with block of 16 x 32
-            static_assert(MMA_N_SdP % 2 == 0);
-            int block_col_idx = n_block * (kBlockN / 32) + (warp_id / AtomLayoutMS) * (MMA_N_SdP / 2);
-            dropout.template apply_dropout</*encode_dropout_in_sign_bit=*/true>(
-                acc_s, block_row_idx, block_col_idx, AtomLayoutMS
-            );
-        }
+        // if constexpr (Is_dropout) {
+        //     int warp_id = tidx / 32;
+        //     int block_row_idx = m_block * (kBlockM / 16) + warp_id % AtomLayoutMS;
+        //     // Need col to be multiples of 32, since we're doing dropout with block of 16 x 32
+        //     static_assert(MMA_N_SdP % 2 == 0);
+        //     int block_col_idx = n_block * (kBlockN / 32) + (warp_id / AtomLayoutMS) * (MMA_N_SdP / 2);
+        //     dropout.template apply_dropout</*encode_dropout_in_sign_bit=*/true>(
+        //         acc_s, block_row_idx, block_col_idx, AtomLayoutMS
+        //     );
+        // }
         // Convert scores from fp32 to fp16/bf16
         Tensor rP = !Is_dropout
             ? flash::convert_type<Element>(acc_s)

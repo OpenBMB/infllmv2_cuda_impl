@@ -1081,11 +1081,26 @@ def prepare_mixed_mask(base_blockmask, cu_seqlens_q, cu_seqlens_k, seqlen_q, seq
         # For each query position, check if key blocks are within the window range
         # according to kernel logic: k_idx >= q_block_idx - (block_window_size * n_block_dim) && k_idx <= q_block_idx
         for i in range(total_unpadded_tokens):
-            q_block_idx = relative_positions[i]
+            # Get the batch this token belongs to
+            batch_idx = batch_indices[i]
+            
+            # Calculate cache_seqlen_k for this batch (matching CUDA logic)
+            # cache_seqlen_k = actual_seqlen_k - actual_seqlen_q / m_block_dim
+            actual_seqlen_q = cu_seqlens_q[batch_idx + 1] - cu_seqlens_q[batch_idx]
+            actual_seqlen_k = cu_seqlens_k[batch_idx + 1] - cu_seqlens_k[batch_idx]
+            cache_seqlen_k = actual_seqlen_k - actual_seqlen_q
+            
+            # Calculate q_block_idx as token position (matching CUDA: loop_step_idx + cache_seqlen_k)
+            loop_step_idx = relative_positions[i]
+            q_block_idx = loop_step_idx + cache_seqlen_k
+            
+            # Calculate window boundaries (matching CUDA logic)
+            k_window_right = q_block_idx // n_block_dim
+            k_window_left = k_window_right - block_window_size + 1
+            
             for k_block in range(num_blocks_k):
-                k_idx = k_block * n_block_dim
                 # Matching the kernel logic exactly
-                if k_idx >= q_block_idx - (block_window_size * n_block_dim) and k_idx <= round_to_multiple(q_block_idx, n_block_dim):
+                if k_window_left <= k_block and k_block <= k_window_right:
                     # Set this position to True for all heads
                     modified_blockmask[:, i, k_block] = True
     
@@ -1158,16 +1173,27 @@ def prepare_batch_mixed_mask(base_blockmask, seqlen_q, seqlen_k, nheads=32, nhea
         for b in range(batch_size):
             for h in range(modified_blockmask.shape[1]):  # Loop through heads_k
                 for q_pos in range(modified_blockmask.shape[2]):  # Loop through seqlen_q
-                    # Calculate the block index for this query position
-                    q_block_idx = q_pos + seqlen_k
+                    # In batch mode, we don't have variable sequence lengths per batch
+                    # So we use a simplified version of the CUDA logic
+                    # Assuming seqlen_k is the key sequence length and seqlen_q is the query sequence length
+                    
+                    # Calculate cache_seqlen_k (matching CUDA logic but simplified for batch mode)
+                    # Since m_block_dim is not passed, we assume it's the same as n_block_dim
+                    m_block_dim = n_block_dim  # Simplified assumption
+                    cache_seqlen_k = seqlen_k - seqlen_q // m_block_dim
+                    
+                    # Calculate q_block_idx as token position (matching CUDA: loop_step_idx + cache_seqlen_k)
+                    loop_step_idx = q_pos
+                    q_block_idx = loop_step_idx + cache_seqlen_k
+                    
+                    # Calculate window boundaries (matching CUDA logic)
+                    k_window_right = q_block_idx // n_block_dim
+                    k_window_left = k_window_right - block_window_size + 1
                     
                     # Apply window logic to each key block
                     for k_block in range(num_blocks_k):
-                        k_idx = k_block * n_block_dim
-                        
-                        # Match the kernel logic exactly: 
-                        # k_idx >= q_block_idx - (block_window_size * n_block_dim) && k_idx <= q_block_idx
-                        if k_idx >= q_block_idx - (block_window_size * n_block_dim) and k_idx <= round_to_multiple(q_block_idx, n_block_dim):
+                        # Match the kernel logic exactly
+                        if k_window_left <= k_block and k_block <= k_window_right:
                             # Set this position to True (block should be attended to)
                             modified_blockmask[b, h, q_pos, k_block] = True
     

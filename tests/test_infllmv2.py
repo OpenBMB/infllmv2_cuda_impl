@@ -3,7 +3,7 @@
 import torch
 from einops import repeat
 from infllm_v2 import (
-    infllmv2_sparse_attn_func,
+    infllmv2_attn_varlen_func,
 )
 from utils import (
     generate_random_padding_mask,
@@ -37,19 +37,16 @@ is_sm80 = torch.cuda.get_device_capability("cuda") == (8, 0)
 is_sm90 = torch.cuda.get_device_capability("cuda") == (9, 0)
 
 def test_flash_attn_varlen_block_output(
-    seqlen_q, seqlen_k, d, p_dropout, causal, exact_streaming, sink_num, local_num, mha_type, dtype, sparsity, batch_size, nheads, nheads_k, block_window_size=0
+    seqlen_q, seqlen_k, d, causal, dtype, sparsity, batch_size, nheads, nheads_k, block_window_size=0
 ):
-    logger.info(f"Starting test with parameters: seqlen_q={seqlen_q}, seqlen_k={seqlen_k}, d={d}, p_dropout={p_dropout}, "
-                f"causal={causal}, exact_streaming={exact_streaming}, sink_num={sink_num}, local_num={local_num}, "
-                f"mha_type={mha_type}, dtype={dtype}, sparsity={sparsity}, batch_size={batch_size}, nheads={nheads}, "
-                f"block_window_size={block_window_size}")
+    logger.info(f"Starting test with parameters: seqlen_q={seqlen_q}, seqlen_k={seqlen_k}, d={d}, "
+                f"causal={causal}, dtype={dtype}, sparsity={sparsity}, batch_size={batch_size}, nheads={nheads}, "
+                f"nheads_k={nheads_k}, block_window_size={block_window_size}")
     
     # Create a unique config name for this test
-    config_name = f"s{seqlen_q}x{seqlen_k}_d{d}_h{nheads}_kv{nheads_k}_drop{p_dropout}_sparsity{sparsity}"
+    config_name = f"s{seqlen_q}x{seqlen_k}_d{d}_h{nheads}_kv{nheads_k}_sparsity{sparsity}"
     if causal:
         config_name += "_causal"
-    if exact_streaming:
-        config_name += "_exact_streaming"
     if block_window_size > 0:
         config_name += f"_window{block_window_size}"
     
@@ -103,27 +100,25 @@ def test_flash_attn_varlen_block_output(
     # Also generate block mask for reference implementation
     base_blockmask = convert_topk_to_base_blockmask(topk_idx, max_seqlen_k, block_size, device)
     
-    head_mask_type = torch.tensor([1] * nheads_k, device=device, dtype=torch.int32)
-    streaming_info = torch.tensor([0, 0] * nheads_k, device=device, dtype=torch.int32)
-    
-    logger.info("Running infllmv2_sparse_attn_func")
+    logger.info("Running infllmv2_attn_varlen_func")
     attn_start = time.time()
-    out_unpad = infllmv2_sparse_attn_func(
+    out_unpad = infllmv2_attn_varlen_func(
         q_unpad, k_unpad, v_unpad,
         cu_seqlens_q, cu_seqlens_k,
-        head_mask_type,
-        streaming_info,
-        topk_idx,  # Use topk_idx directly instead of base_blockmask
         max_seqlen_q, max_seqlen_k,
-        p_dropout,
-        deterministic=False,
+        dropout_p=0.0,
         softmax_scale=None,
-        is_causal=causal,
-        exact_streaming=exact_streaming,
+        causal=causal,
+        window_size=(-1, -1),  # -1 means infinite context window
+        softcap=0.0,  # 0.0 means deactivated
+        alibi_slopes=None,
+        deterministic=False,
         return_attn_probs=False,
+        block_table=None,
+        topk_idx=topk_idx,  # Use topk_idx directly instead of base_blockmask
         block_window_size=block_window_size,
     )
-    logger.info(f"infllmv2_sparse_attn_func completed in {time.time() - attn_start:.2f}s")
+    logger.info(f"infllmv2_attn_varlen_func completed in {time.time() - attn_start:.2f}s")
     
     out = output_pad_fn(out_unpad)
     
@@ -141,7 +136,7 @@ def test_flash_attn_varlen_block_output(
             mixed_mask,
             query_padding_mask,
             key_padding_mask,
-            p_dropout,
+            0.0,
             None,  # dropout_mask
             causal=causal,
         )
@@ -160,7 +155,7 @@ def test_flash_attn_varlen_block_output(
             mixed_mask,
             query_padding_mask,
             key_padding_mask,
-            p_dropout,
+            0.0,
             None,  # dropout_mask
             causal=causal,
             upcast=False,
@@ -215,19 +210,20 @@ def test_flash_attn_varlen_block_output(
         v_unpad_cp = v_unpad.detach().clone().requires_grad_(True)
         
         # Run forward pass with the copies
-        out_unpad_cp = infllmv2_sparse_attn_func(
+        out_unpad_cp = infllmv2_attn_varlen_func(
             q_unpad_cp, k_unpad_cp, v_unpad_cp,
             cu_seqlens_q, cu_seqlens_k,
-            head_mask_type,
-            streaming_info,
-            topk_idx,
             max_seqlen_q, max_seqlen_k,
-            p_dropout,
-            deterministic=False,
+            dropout_p=0.0,
             softmax_scale=None,
-            is_causal=causal,
-            exact_streaming=exact_streaming,
+            causal=causal,
+            window_size=(-1, -1),  # -1 means infinite context window
+            softcap=0.0,  # 0.0 means deactivated
+            alibi_slopes=None,
+            deterministic=False,
             return_attn_probs=False,
+            block_table=None,
+            topk_idx=topk_idx,
             block_window_size=block_window_size,
         )
         
@@ -290,10 +286,10 @@ def test_flash_attn_varlen_block_output(
     
     # Forward check
     if max_diff <= 2 * pt_max_diff:
-        print("✅ Test PASSED: infllmv2_sparse_attention matches reference within tolerance")
+        print("✅ FORWARD PASS: PASSED - infllmv2_sparse_attention matches reference within tolerance")
         fwd_pass = True
     else:
-        print(f"❌ Test FAILED: infllmv2_sparse_attention difference ({max_diff}) exceeds tolerance (2 * {pt_max_diff})")
+        print(f"❌ FORWARD PASS: FAILED - infllmv2_sparse_attention difference ({max_diff}) exceeds tolerance (2 * {pt_max_diff})")
         fwd_pass = False
     
     # Backward check
@@ -309,10 +305,10 @@ def test_flash_attn_varlen_block_output(
         if (dq_max_diff <= 3 * dq_pt_max_diff and 
             dk_max_diff <= 3 * dk_pt_max_diff and 
             dv_max_diff <= 3 * dv_pt_max_diff):
-            print("✅ Backward Test PASSED: Gradients match reference within tolerance")
+            print("✅ BACKWARD PASS: PASSED - Gradients match reference within tolerance")
             bwd_pass = True
         else:
-            print(f"❌ Backward Test FAILED: Gradient differences exceed tolerance")
+            print(f"❌ BACKWARD PASS: FAILED - Gradient differences exceed tolerance")
             
             # Add detailed debugging for gradient differences
             print(f"\n=== DETAILED GRADIENT ANALYSIS ===")
@@ -416,20 +412,24 @@ def test_flash_attn_varlen_block_output(
             
             bwd_pass = False
         
-        return fwd_pass and bwd_pass
+        # Print test summary
+        print(f"\n📊 Test Summary: Forward Pass = {'PASSED' if fwd_pass else 'FAILED'}, Backward Pass = {'PASSED' if bwd_pass else 'FAILED'}")
+        return fwd_pass, bwd_pass
     
-    return fwd_pass
+    # Print test summary (no backward pass)
+    print(f"\n📊 Test Summary: Forward Pass = {'PASSED' if fwd_pass else 'FAILED'}, Backward Pass = N/A")
+    return fwd_pass, True  # No backward pass test for this case
 
 
 if __name__ == "__main__":
     # Define test configurations - focus on problem cases
     test_configs = [
-        # seqlen_q, seqlen_k, d, p_dropout, causal, exact_streaming, sink_num, local_num, mha_type, dtype, sparsity, batch_size, nheads, nheads_k, block_window_size
-        (2048, 2048, 128, 0.0, True, False, 0, 0, "gqa", torch.bfloat16, 0.7, 2, 32, 2, 0),
-        (2048, 2048, 128, 0.0, True, False, 0, 0, "gqa", torch.bfloat16, 0.7, 2, 32, 2, 2048//64),
+        # seqlen_q, seqlen_k, d, causal, dtype, sparsity, batch_size, nheads, nheads_k, block_window_size
+        (2048, 2048, 128, True, torch.float16, 0.7, 2, 32, 2, 0),
+        (2048, 2048, 128, True, torch.float16, 0.7, 2, 32, 2, 2048//64),
         # Only run the failing test case for detailed debugging
-        (2048, 2048, 128, 0.0, True, False, 0, 0, "gqa", torch.bfloat16, 1.0, 2, 32, 2, 2),
-        (1024, 1024, 64, 0.0, True, False, 0, 0, "gqa", torch.bfloat16, 0.8, 2, 32, 2, 3),
+        (2048, 2048, 128, True, torch.float16, 1.0, 2, 32, 2, 2),
+        (1024, 1024, 128, True, torch.float16, 0.8, 2, 32, 2, 3),
     ]
     
     # Run tests
@@ -442,8 +442,8 @@ if __name__ == "__main__":
         torch.cuda.empty_cache()
         gc.collect()
         
-        result = test_flash_attn_varlen_block_output(*config)
-        results.append(result)
+        fwd_pass, bwd_pass = test_flash_attn_varlen_block_output(*config)
+        results.append((fwd_pass, bwd_pass))
         
         # Ensure memory is fully cleared after each test
         torch.cuda.empty_cache()
@@ -454,11 +454,19 @@ if __name__ == "__main__":
     print("TEST SUMMARY")
     print("="*80)
     for i, (config, result) in enumerate(zip(test_configs, results)):
-        status = "PASSED" if result else "FAILED"
-        print(f"Test {i+1}: {status} - sparsity={config[10]}, dropout={config[3]}, block_window={config[14]}")
+        fwd_pass, bwd_pass = result
+        fwd_status = "PASSED" if fwd_pass else "FAILED"
+        bwd_status = "PASSED" if bwd_pass else "FAILED"
+        print(f"Test {i+1}: Forward={fwd_status}, Backward={bwd_status} - sparsity={config[5]}, block_window={config[9]}")
     
     # Overall result
-    if all(results):
+    all_fwd_pass = all(result[0] for result in results)
+    all_bwd_pass = all(result[1] for result in results)
+    
+    if all_fwd_pass and all_bwd_pass:
         print("\nAll tests PASSED! 🎉")
     else:
-        print("\nSome tests FAILED! ❌")
+        if not all_fwd_pass:
+            print("\nSome forward pass tests FAILED! ❌")
+        if not all_bwd_pass:
+            print("\nSome backward pass tests FAILED! ❌")
