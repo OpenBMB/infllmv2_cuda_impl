@@ -156,7 +156,6 @@ class bwdIterator{
     };
 
     __device__ int max_no_larger(int target) const {
-        return target;
         if (blockmask_ptr == nullptr) {
             return target;
         }
