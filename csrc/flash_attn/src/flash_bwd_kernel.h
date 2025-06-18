@@ -674,7 +674,7 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
             cute::copy(gmem_tiled_copy_dQaccum, tdQgdQaccum, acc_dq_reshaped);
         }
 
-        if (Double_buffer && m_block > m_block_min) {
+        if (Double_buffer && !current_is_last_block) {
             // Double buffer for sQ
             const int sQ_offset = m_block % 2 == 0 ? size(sQ) : -size(sQ);
             tQsQ.data() = tQsQ.data() + sQ_offset;
@@ -705,7 +705,7 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
 
         __syncthreads(); // Need syncthreads since we're writing to the same sdO location
 
-        if (m_block > m_block_min) {
+        if (!current_is_last_block) {
             // Advance gdO
             tdOgdO.data() = tdOgdO.data() + (-int(kBlockM * params.do_row_stride));
             if (Is_first) {
@@ -722,8 +722,8 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
                     smem_tiled_copy_dS, smem_tiled_copy_Kt, smem_thr_copy_dS, smem_thr_copy_Kt);
         // if (cute::thread0()) { print(acc_dq); }
 
-        if (m_block > m_block_min) {
-            gLSE.data() = gLSE.data() + (-int(kBlockM));
+        if (!current_is_last_block) {
+            gLSE.data() = gLSE.data() + (-int(next_leap * kBlockM));
             #pragma unroll
             for (int mi = 0; mi < size(lse); ++mi) { lse(mi) = gLSE(get<0>(taccScS_row(mi))); }
             gdPsum.data() = gdPsum.data() + (-int(kBlockM));
@@ -758,7 +758,7 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
         if (Double_buffer) {  // Double buffer for sQ
             tdKsQt.data() = tdKsQt.data() + (m_block % 2 == 0 ? size(sQ) : -size(sQ));
         }
-        if (!Double_buffer && m_block > m_block_min) {
+        if (!Double_buffer && !current_is_last_block) {
             __syncthreads();
             // Advance gQ
             tQgQ.data() = tQgQ.data() + (-int(kBlockM * params.q_row_stride));
