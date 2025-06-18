@@ -499,7 +499,25 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
     const float alibi_slope = !Has_alibi || params.alibi_slopes_ptr == nullptr ? 0.0f : reinterpret_cast<float *>(params.alibi_slopes_ptr)[bidb * params.alibi_slopes_batch_stride + bidh] / params.scale_softmax;
     flash::Alibi<Is_causal> alibi(alibi_slope, binfo.actual_seqlen_k, binfo.actual_seqlen_q);
 
-    for (; m_block >= m_block_min; --m_block) {
+    // if (blockIdx.x == 2 && blockIdx.y == 0 && blockIdx.z == 0 && threadIdx.x == 0)
+    //     printf("current_is_last_block before = %d\n", current_is_last_block);
+    for (; !current_is_last_block && m_block >= m_block_min; m_block = next_block_row_idx) {
+        current_is_last_block = m_block <= m_block_min;
+        // if (blockIdx.x == 2 && blockIdx.y == 0 && blockIdx.z == 0 && threadIdx.x == 0)
+        //     printf("current_is_last_block after = %d\n", current_is_last_block);
+        next_leap = 0;
+        if (!current_is_last_block){
+            ++calc_block_count;
+            mask_val = blockmask.max_no_larger(m_block - 1);
+            next_block_row_idx = mask_val;
+            next_leap = m_block - next_block_row_idx;
+            // 打印跳跃步长
+            // printf("m_block=%d -> next_block_row_idx=%d (next_leap=%d)\n", 
+            //     m_block, next_block_row_idx, next_leap);
+            current_is_last_block = current_is_last_block || mask_val == -1;
+        }
+
+
         Tensor acc_s = partition_fragment_C(tiled_mma_sdp, Shape<Int<kBlockM>, Int<kBlockN>>{});  // (MMA=4, MMA_N, MMA_N)
         clear(acc_s);
         cute::cp_async_wait<0>();
