@@ -1,9 +1,3 @@
-[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=125, params.num_blocks_n=2, params.block_window_size=0, k_window_right=0, k_window_left=1
-[fwd before gemm] bidh=0, m_block=0, n_block=1
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=0
-[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=125, params.num_blocks_n=2, params.block_window_size=0, k_window_right=0, k_window_left=1
-[fwd before gemm] bidh=0, m_block=0, n_block=1
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=0
 [bwdIterator init]: max_block_idx=125, binfo.actual_seqlen_q=2000, params.m_block_dim=16, q_bit_position=0, q_uint64_idx=0, k_block_idx=0, uint64_per_row=2
 [bwd empty_col_flag]: empty_col_flag=0, max_no_larger_idx=124, m_block_min=0, m_block_max=125
 [bwd before gemm] bidh=0, m_block=124, n_block=0 -> next_block_row_idx=123 (next_leap=1)
@@ -131,26 +125,10 @@
 [bwd before gemm] bidh=0, m_block=2, n_block=0 -> next_block_row_idx=1 (next_leap=1)
 [bwd before gemm] bidh=0, m_block=1, n_block=0 -> next_block_row_idx=0 (next_leap=1)
 [bwd before gemm] bidh=0, m_block=0, n_block=0 -> next_block_row_idx=0 (next_leap=0)
-[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=2046, params.num_blocks_n=32, params.block_window_size=0, k_window_right=0, k_window_left=1
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=29
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=27
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=25
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=20
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=14
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=12
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=8
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=2
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=1
-[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=2046, params.num_blocks_n=32, params.block_window_size=0, k_window_right=0, k_window_left=1
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=29
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=27
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=25
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=20
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=14
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=12
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=8
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=2
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=1
+[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=2046, params.num_blocks_n=32, params.block_window_size=2, k_window_right=0, k_window_left=-1
+[fwd before gemm] bidh=0, m_block=0, n_block=0
+[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=2046, params.num_blocks_n=32, params.block_window_size=2, k_window_right=0, k_window_left=-1
+[fwd before gemm] bidh=0, m_block=0, n_block=0
 [bwdIterator init]: max_block_idx=2046, binfo.actual_seqlen_q=32736, params.m_block_dim=16, q_bit_position=0, q_uint64_idx=0, k_block_idx=0, uint64_per_row=32
 [bwd empty_col_flag]: empty_col_flag=0, max_no_larger_idx=2045, m_block_min=0, m_block_max=2046
 [bwd before gemm] bidh=0, m_block=2045, n_block=0 -> next_block_row_idx=2044 (next_leap=1)
@@ -2201,84 +2179,42 @@
 [bwd before gemm] bidh=0, m_block=0, n_block=0 -> next_block_row_idx=0 (next_leap=0)
 
 ================================================================================
-Running test with config: (128, 128, 128, False, torch.float16, 0, 1, 32, 2, 0)
+Running test with config: (128, 128, 128, True, torch.float16, 0, 1, 32, 2, 0)
 ================================================================================
-Output max diff: 0.00048828125
-Output mean diff: 1.919269561767578e-05
-Pytorch max diff: 0.00146484375
-Pytorch mean diff: 5.507469177246094e-05
+Output max diff: 0.0009765625
+Output mean diff: 2.4616718292236328e-05
+Pytorch max diff: 0.001953125
+Pytorch mean diff: 6.836652755737305e-05
 
 === DETAILED FORWARD PASS DIFFERENCE ANALYSIS ===
 Top 5 forward pass differences:
-  1. Diff=0.000488 at (batch=0, seq=1, head=15, dim=2)
+  1. Diff=0.000977 at (batch=0, seq=12, head=0, dim=1)
      Block index: q_block=0
-     Reference value: -0.518066, Our value: -0.518555, PyTorch value: -0.518066
-  2. Diff=0.000488 at (batch=0, seq=6, head=15, dim=71)
+     Reference value: 1.551758, Our value: 1.550781, PyTorch value: 1.550781
+  2. Diff=0.000977 at (batch=0, seq=12, head=1, dim=91)
      Block index: q_block=0
-     Reference value: -0.552246, Our value: -0.552734, PyTorch value: -0.552246
-  3. Diff=0.000488 at (batch=0, seq=7, head=8, dim=20)
+     Reference value: 1.765625, Our value: 1.764648, PyTorch value: 1.765625
+  3. Diff=0.000977 at (batch=0, seq=12, head=2, dim=21)
      Block index: q_block=0
-     Reference value: 0.549805, Our value: 0.549316, PyTorch value: 0.549316
-  4. Diff=0.000488 at (batch=0, seq=9, head=14, dim=104)
+     Reference value: 1.912109, Our value: 1.911133, PyTorch value: 1.911133
+  4. Diff=0.000977 at (batch=0, seq=12, head=2, dim=36)
      Block index: q_block=0
-     Reference value: 0.504395, Our value: 0.503906, PyTorch value: 0.503906
-  5. Diff=0.000488 at (batch=0, seq=9, head=24, dim=60)
+     Reference value: -1.482422, Our value: -1.481445, PyTorch value: -1.481445
+  5. Diff=0.000977 at (batch=0, seq=12, head=2, dim=74)
      Block index: q_block=0
-     Reference value: 0.504395, Our value: 0.503906, PyTorch value: 0.504395
-dQ max diff: 0.0009765625
-dK max diff: 0.001953125
-dV max diff: 0.001953125
-dQ mean diff: 2.3066997528076172e-05
-dK mean diff: 9.167194366455078e-05
-dV mean diff: 9.304285049438477e-05
-dQ Pytorch max diff: 0.00146484375
-dK Pytorch max diff: 0.0029296875
-dV Pytorch max diff: 0.001953125
-dQ Pytorch mean diff: 6.568431854248047e-05
-dK Pytorch mean diff: 0.0002834796905517578
-dV Pytorch mean diff: 0.00023937225341796875
-✅ FORWARD PASS: PASSED - infllmv2_sparse_attention matches reference within tolerance
-✅ BACKWARD PASS: PASSED - Gradients match reference within tolerance
-
-📊 Test Summary: Forward Pass = PASSED, Backward Pass = PASSED
-
-================================================================================
-Running test with config: (2048, 2048, 128, False, torch.float16, 0.7, 1, 32, 2, 0)
-================================================================================
-Output max diff: 0.000244140625
-Output mean diff: 9.775161743164062e-06
-Pytorch max diff: 0.0009765625
-Pytorch mean diff: 2.8073787689208984e-05
-
-=== DETAILED FORWARD PASS DIFFERENCE ANALYSIS ===
-Top 5 forward pass differences:
-  1. Diff=0.000244 at (batch=0, seq=0, head=4, dim=47)
-     Block index: q_block=0
-     Reference value: -0.250977, Our value: -0.250732, PyTorch value: -0.250732
-  2. Diff=0.000244 at (batch=0, seq=4, head=1, dim=44)
-     Block index: q_block=0
-     Reference value: 0.254639, Our value: 0.254883, PyTorch value: 0.254639
-  3. Diff=0.000244 at (batch=0, seq=19, head=11, dim=43)
-     Block index: q_block=0
-     Reference value: 0.265869, Our value: 0.265625, PyTorch value: 0.265869
-  4. Diff=0.000244 at (batch=0, seq=38, head=26, dim=37)
-     Block index: q_block=0
-     Reference value: -0.250732, Our value: -0.250488, PyTorch value: -0.250488
-  5. Diff=0.000244 at (batch=0, seq=41, head=15, dim=8)
-     Block index: q_block=0
-     Reference value: 0.251953, Our value: 0.251709, PyTorch value: 0.252197
-dQ max diff: 2.28515625
-dK max diff: 8.3359375
-dV max diff: 15.6796875
-dQ mean diff: 0.10028076171875
-dK mean diff: 0.5810546875
-dV mean diff: 2.068359375
-dQ Pytorch max diff: 0.00146484375
-dK Pytorch max diff: 0.001953125
-dV Pytorch max diff: 0.00146484375
-dQ Pytorch mean diff: 3.457069396972656e-05
-dK Pytorch mean diff: 0.0001499652862548828
-dV Pytorch mean diff: 0.00012362003326416016
+     Reference value: 1.578125, Our value: 1.577148, PyTorch value: 1.577148
+dQ max diff: 3.080078125
+dK max diff: 9.5625
+dV max diff: 19.5625
+dQ mean diff: 0.1419677734375
+dK mean diff: 0.50048828125
+dV mean diff: 0.578125
+dQ Pytorch max diff: 0.001953125
+dK Pytorch max diff: 0.00439453125
+dV Pytorch max diff: 0.0078125
+dQ Pytorch mean diff: 7.790327072143555e-05
+dK Pytorch mean diff: 0.00030517578125
+dV Pytorch mean diff: 0.0002770423889160156
 ✅ FORWARD PASS: PASSED - infllmv2_sparse_attention matches reference within tolerance
 ❌ BACKWARD PASS: FAILED - Gradient differences exceed tolerance
 
@@ -2286,119 +2222,164 @@ dV Pytorch mean diff: 0.00012362003326416016
 Block window size: 0
 
 Top 5 dQ differences:
-  1. Diff=2.285156 at (batch=0, seq=1860, head=28, dim=2)
-     Block indices: q_block=29, k_block=29
-     Reference value: 0.048615, Our value: -2.236328
-  2. Diff=2.208984 at (batch=0, seq=1672, head=4, dim=118)
-     Block indices: q_block=26, k_block=26
-     Reference value: -0.071106, Our value: 2.138672
-  3. Diff=2.091797 at (batch=0, seq=1860, head=28, dim=126)
-     Block indices: q_block=29, k_block=29
-     Reference value: 0.105469, Our value: 2.197266
-  4. Diff=2.033203 at (batch=0, seq=906, head=14, dim=103)
-     Block indices: q_block=14, k_block=14
-     Reference value: 0.035278, Our value: 2.068359
-  5. Diff=2.013672 at (batch=0, seq=260, head=21, dim=56)
-     Block indices: q_block=4, k_block=4
-     Reference value: -0.016037, Our value: -2.029297
+  1. Diff=3.080078 at (batch=0, seq=12, head=11, dim=94)
+     Block indices: q_block=0, k_block=0
+     Reference value: -3.080078, Our value: 0.000000
+  2. Diff=2.962891 at (batch=0, seq=12, head=11, dim=109)
+     Block indices: q_block=0, k_block=0
+     Reference value: -2.962891, Our value: 0.000000
+  3. Diff=2.839844 at (batch=0, seq=12, head=11, dim=40)
+     Block indices: q_block=0, k_block=0
+     Reference value: 2.839844, Our value: 0.000000
+  4. Diff=2.832031 at (batch=0, seq=15, head=30, dim=107)
+     Block indices: q_block=0, k_block=0
+     Reference value: 2.832031, Our value: 0.000000
+  5. Diff=2.792969 at (batch=0, seq=12, head=11, dim=107)
+     Block indices: q_block=0, k_block=0
+     Reference value: 2.792969, Our value: 0.000000
 
 Top 5 dK differences:
-  1. Diff=8.335938 at (batch=0, seq=1527, head=0, dim=45)
-     Block indices: q_block=23, k_block=23
-     Reference value: -0.117920, Our value: 8.218750
-  2. Diff=8.023438 at (batch=0, seq=575, head=1, dim=34)
-     Block indices: q_block=8, k_block=8
-     Reference value: -0.248657, Our value: 7.777344
-  3. Diff=7.898438 at (batch=0, seq=1527, head=0, dim=39)
-     Block indices: q_block=23, k_block=23
-     Reference value: -0.166016, Our value: -8.062500
-  4. Diff=7.808594 at (batch=0, seq=1527, head=0, dim=81)
-     Block indices: q_block=23, k_block=23
-     Reference value: -0.066833, Our value: 7.742188
-  5. Diff=7.718750 at (batch=0, seq=796, head=1, dim=107)
-     Block indices: q_block=12, k_block=12
-     Reference value: 0.546875, Our value: 8.265625
+  1. Diff=9.562500 at (batch=0, seq=1, head=1, dim=121)
+     Block indices: q_block=0, k_block=0
+     Reference value: -9.289062, Our value: 0.271729
+  2. Diff=8.148438 at (batch=0, seq=1, head=1, dim=13)
+     Block indices: q_block=0, k_block=0
+     Reference value: 8.570312, Our value: 0.424316
+  3. Diff=7.750000 at (batch=0, seq=0, head=0, dim=77)
+     Block indices: q_block=0, k_block=0
+     Reference value: -7.710938, Our value: 0.039001
+  4. Diff=7.714844 at (batch=0, seq=0, head=0, dim=43)
+     Block indices: q_block=0, k_block=0
+     Reference value: 7.562500, Our value: -0.150513
+  5. Diff=7.531250 at (batch=0, seq=0, head=0, dim=7)
+     Block indices: q_block=0, k_block=0
+     Reference value: -7.523438, Our value: 0.009636
 
 Top 5 dV differences:
-  1. Diff=15.679688 at (batch=0, seq=38, head=1, dim=6)
+  1. Diff=19.562500 at (batch=0, seq=0, head=0, dim=111)
      Block indices: q_block=0, k_block=0
-     Reference value: -0.077820, Our value: -15.757812
-  2. Diff=14.742188 at (batch=0, seq=1591, head=0, dim=81)
-     Block indices: q_block=24, k_block=24
-     Reference value: -0.833008, Our value: 13.906250
-  3. Diff=13.640625 at (batch=0, seq=1667, head=0, dim=46)
-     Block indices: q_block=26, k_block=26
-     Reference value: -0.108826, Our value: -13.750000
-  4. Diff=13.570312 at (batch=0, seq=187, head=1, dim=90)
-     Block indices: q_block=2, k_block=2
-     Reference value: -0.392334, Our value: -13.960938
-  5. Diff=13.367188 at (batch=0, seq=869, head=1, dim=95)
-     Block indices: q_block=13, k_block=13
-     Reference value: -0.464355, Our value: 12.906250
+     Reference value: -19.437500, Our value: 0.120667
+  2. Diff=17.671875 at (batch=0, seq=0, head=1, dim=7)
+     Block indices: q_block=0, k_block=0
+     Reference value: 18.015625, Our value: 0.336426
+  3. Diff=17.140625 at (batch=0, seq=0, head=1, dim=15)
+     Block indices: q_block=0, k_block=0
+     Reference value: -17.109375, Our value: 0.027130
+  4. Diff=13.484375 at (batch=0, seq=0, head=1, dim=20)
+     Block indices: q_block=0, k_block=0
+     Reference value: 13.484375, Our value: 0.000422
+  5. Diff=12.960938 at (batch=0, seq=0, head=0, dim=109)
+     Block indices: q_block=0, k_block=0
+     Reference value: 13.078125, Our value: 0.114502
 
 === MIXED MASK VALUES AT ERROR LOCATIONS ===
 
 Mixed mask values for top dQ differences:
-  1. Location: (batch=0, seq=1860, head=28, dim=2)
-     Q block: 29
-     K blocks with non-zero mask: [(28, True), (29, True), (30, True)]
-  2. Location: (batch=0, seq=1672, head=4, dim=118)
-     Q block: 26
-     K blocks with non-zero mask: [(25, True), (27, True)]
-  3. Location: (batch=0, seq=1860, head=28, dim=126)
-     Q block: 29
-     K blocks with non-zero mask: [(28, True), (29, True), (30, True)]
-  4. Location: (batch=0, seq=906, head=14, dim=103)
-     Q block: 14
-     K blocks with non-zero mask: [(13, True), (14, True), (15, True)]
-  5. Location: (batch=0, seq=260, head=21, dim=56)
-     Q block: 4
-     K blocks with non-zero mask: [(3, True)]
+  1. Location: (batch=0, seq=12, head=11, dim=94)
+     Q block: 0
+     K blocks with non-zero mask: []
+  2. Location: (batch=0, seq=12, head=11, dim=109)
+     Q block: 0
+     K blocks with non-zero mask: []
+  3. Location: (batch=0, seq=12, head=11, dim=40)
+     Q block: 0
+     K blocks with non-zero mask: []
+  4. Location: (batch=0, seq=15, head=30, dim=107)
+     Q block: 0
+     K blocks with non-zero mask: []
+  5. Location: (batch=0, seq=12, head=11, dim=107)
+     Q block: 0
+     K blocks with non-zero mask: []
 
 Mixed mask values for top dK differences:
-  1. Location: (batch=0, seq=1527, head=0, dim=45)
-     Q block: 23
-     K blocks with non-zero mask: [(22, True), (23, True)]
-  2. Location: (batch=0, seq=575, head=1, dim=34)
-     Q block: 8
+  1. Location: (batch=0, seq=1, head=1, dim=121)
+     Q block: 0
      K blocks with non-zero mask: []
-  3. Location: (batch=0, seq=1527, head=0, dim=39)
-     Q block: 23
-     K blocks with non-zero mask: [(22, True), (23, True)]
-  4. Location: (batch=0, seq=1527, head=0, dim=81)
-     Q block: 23
-     K blocks with non-zero mask: [(22, True), (23, True)]
-  5. Location: (batch=0, seq=796, head=1, dim=107)
-     Q block: 12
-     K blocks with non-zero mask: [(11, True), (13, True)]
+  2. Location: (batch=0, seq=1, head=1, dim=13)
+     Q block: 0
+     K blocks with non-zero mask: []
+  3. Location: (batch=0, seq=0, head=0, dim=77)
+     Q block: 0
+     K blocks with non-zero mask: []
+  4. Location: (batch=0, seq=0, head=0, dim=43)
+     Q block: 0
+     K blocks with non-zero mask: []
+  5. Location: (batch=0, seq=0, head=0, dim=7)
+     Q block: 0
+     K blocks with non-zero mask: []
 
 Mixed mask values for top dV differences:
-  1. Location: (batch=0, seq=38, head=1, dim=6)
+  1. Location: (batch=0, seq=0, head=0, dim=111)
      Q block: 0
-     K blocks with non-zero mask: [(0, True), (1, True)]
-  2. Location: (batch=0, seq=1591, head=0, dim=81)
-     Q block: 24
-     K blocks with non-zero mask: [(23, True), (24, True), (25, True)]
-  3. Location: (batch=0, seq=1667, head=0, dim=46)
-     Q block: 26
-     K blocks with non-zero mask: [(25, True), (26, True), (27, True)]
-  4. Location: (batch=0, seq=187, head=1, dim=90)
-     Q block: 2
-     K blocks with non-zero mask: [(1, True), (3, True)]
-  5. Location: (batch=0, seq=869, head=1, dim=95)[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=2046, params.num_blocks_n=32, params.block_window_size=0, k_window_right=0, k_window_left=1
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=29
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=14
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=12
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=8
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=2
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=1
-[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=2046, params.num_blocks_n=32, params.block_window_size=0, k_window_right=0, k_window_left=1
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=29
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=14
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=12
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=8
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=2
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=1
+     K blocks with non-zero mask: []
+  2. Location: (batch=0, seq=0, head=1, dim=7)
+     Q block: 0
+     K blocks with non-zero mask: []
+  3. Location: (batch=0, seq=0, head=1, dim=15)
+     Q block: 0
+     K blocks with non-zero mask: []
+  4. Location: (batch=0, seq=0, head=1, dim=20)
+     Q block: 0
+     K blocks with non-zero mask: []
+  5. Location: (batch=0, seq=0, head=0, dim=109)
+     Q block: 0
+     K blocks with non-zero mask: []
+
+=== BASE BLOCK MASK STRUCTURE ===
+Active blocks per head: [250, 250]
+Total blocks: 1
+
+=== TOPK INDICES STRUCTURE ===
+topk_idx shape: torch.Size([2, 125, 2])
+Sample of topk_idx values (first 10 per head):
+  Head 0: [[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]
+  Head 1: [[0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1], [0, 1]]
+
+📊 Test Summary: Forward Pass = PASSED, Backward Pass = FAILED
+
+================================================================================
+Running test with config: (2048, 2048, 128, True, torch.float16, 0.7, 1, 32, 2, 2)
+================================================================================
+Output max diff: 0.001953125
+Output mean diff: 1.3768672943115234e-05
+Pytorch max diff: 0.001953125
+Pytorch mean diff: 3.916025161743164e-05
+
+=== DETAILED FORWARD PASS DIFFERENCE ANALYSIS ===
+Top 5 forward pass differences:
+  1. Diff=0.001953 at (batch=0, seq=0, head=21, dim=109)
+     Block index: q_block=0
+     Reference value: -2.328125, Our value: -2.330078, PyTorch value: -2.328125
+     Near block boundary: True (position within block: 0)
+  2. Diff=0.001953 at (batch=0, seq=1, head=13, dim=88)
+     Block index: q_block=0
+     Reference value: -2.066406, Our value: -2.068359, PyTorch value: -2.068359
+     Near block boundary: True (position within block: 1)
+  3. Diff=0.001953 at (batch=0, seq=1, head=25, dim=109)
+     Block index: q_block=0
+     Reference value: -2.369141, Our value: -2.367188, PyTorch value: -2.369141
+     Near block boundary: True (position within block: 1)
+  4. Diff=0.001953 at (batch=0, seq=3, head=31, dim=109)
+     Block index: q_block=0
+     Reference value: -2.035156, Our value: -2.033203, PyTorch value: -2.033203
+     Near block boundary: False (position within block: 3)
+  5. Diff=0.001953 at (batch=0, seq=4, head=1, dim=88)
+     Block index: q_block=0
+     Reference value: -2.025391, Our value: -2.023438, PyTorch value: -2.023438
+     Near block boundary: False (position within block: 4)
+dQ max diff: 3.630859375
+dK max diff: 10.4375
+dV max diff: 10.015625
+dQ mean diff: 0.07855224609375
+dK mean diff: 0.281982421875
+dV mean diff: 0.29638671875
+dQ Pytorch max diff: 0.001953125
+dK Pytorch max diff: 0.0078125
+dV Pytorch max diff: 0.0078125
+dQ Pytorch mean diff: 4.7326087951660156e-05[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=2046, params.num_blocks_n=32, params.block_window_size=2, k_window_right=0, k_window_left=-1
+[fwd before gemm] bidh=0, m_block=0, n_block=0
+[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=2046, params.num_blocks_n=32, params.block_window_size=2, k_window_right=0, k_window_left=-1
+[fwd before gemm] bidh=0, m_block=0, n_block=0
 [bwdIterator init]: max_block_idx=2046, binfo.actual_seqlen_q=32736, params.m_block_dim=16, q_bit_position=0, q_uint64_idx=0, k_block_idx=0, uint64_per_row=32
 [bwd empty_col_flag]: empty_col_flag=0, max_no_larger_idx=2045, m_block_min=0, m_block_max=2046
 [bwd before gemm] bidh=0, m_block=2045, n_block=0 -> next_block_row_idx=2044 (next_leap=1)
@@ -4448,8 +4429,132 @@ Mixed mask values for top dV differences:
 [bwd before gemm] bidh=0, m_block=1, n_block=0 -> next_block_row_idx=0 (next_leap=1)
 [bwd before gemm] bidh=0, m_block=0, n_block=0 -> next_block_row_idx=0 (next_leap=0)
 
-     Q block: 13
-     K blocks with non-zero mask: [(13, True), (14, True)]
+dK Pytorch mean diff: 0.0001857280731201172
+dV Pytorch mean diff: 0.00015616416931152344
+✅ FORWARD PASS: PASSED - infllmv2_sparse_attention matches reference within tolerance
+❌ BACKWARD PASS: FAILED - Gradient differences exceed tolerance
+
+=== DETAILED GRADIENT ANALYSIS ===
+Block window size: 2
+
+Top 5 dQ differences:
+  1. Diff=3.630859 at (batch=0, seq=0, head=13, dim=30)
+     Block indices: q_block=0, k_block=0
+     Reference value: 3.630859, Our value: 0.000000
+     At window boundary: False
+  2. Diff=3.232422 at (batch=0, seq=1, head=21, dim=83)
+     Block indices: q_block=0, k_block=0
+     Reference value: -3.232422, Our value: 0.000000
+     At window boundary: False
+  3. Diff=2.949219 at (batch=0, seq=0, head=13, dim=29)
+     Block indices: q_block=0, k_block=0
+     Reference value: -2.949219, Our value: 0.000000
+     At window boundary: False
+  4. Diff=2.884766 at (batch=0, seq=1, head=21, dim=125)
+     Block indices: q_block=0, k_block=0
+     Reference value: -2.884766, Our value: 0.000000
+     At window boundary: False
+  5. Diff=2.867188 at (batch=0, seq=3, head=27, dim=10)
+     Block indices: q_block=0, k_block=0
+     Reference value: -2.867188, Our value: 0.000000
+     At window boundary: False
+
+Top 5 dK differences:
+  1. Diff=10.437500 at (batch=0, seq=4, head=0, dim=11)
+     Block indices: q_block=0, k_block=0
+     Reference value: -10.320312, Our value: 0.113770
+     At window boundary: False
+  2. Diff=8.546875 at (batch=0, seq=0, head=1, dim=43)
+     Block indices: q_block=0, k_block=0
+     Reference value: 8.554688, Our value: 0.006824
+     At window boundary: False
+  3. Diff=8.039062 at (batch=0, seq=1, head=1, dim=43)
+     Block indices: q_block=0, k_block=0
+     Reference value: -7.875000, Our value: 0.164551
+     At window boundary: False
+  4. Diff=7.531250 at (batch=0, seq=1, head=0, dim=120)
+     Block indices: q_block=0, k_block=0
+     Reference value: -7.636719, Our value: -0.107056
+     At window boundary: False
+  5. Diff=7.425781 at (batch=0, seq=2, head=0, dim=101)
+     Block indices: q_block=0, k_block=0
+     Reference value: -7.445312, Our value: -0.019623
+     At window boundary: False
+
+Top 5 dV differences:
+  1. Diff=10.015625 at (batch=0, seq=1, head=1, dim=39)
+     Block indices: q_block=0, k_block=0
+     Reference value: -10.132812, Our value: -0.117126
+     At window boundary: False
+  2. Diff=9.789062 at (batch=0, seq=0, head=0, dim=37)
+     Block indices: q_block=0, k_block=0
+     Reference value: -9.617188, Our value: 0.175293
+     At window boundary: False
+  3. Diff=9.570312 at (batch=0, seq=2, head=1, dim=61)
+     Block indices: q_block=0, k_block=0
+     Reference value: 9.656250, Our value: 0.086853
+     At window boundary: False
+  4. Diff=9.507812 at (batch=0, seq=8, head=0, dim=83)
+     Block indices: q_block=0, k_block=0
+     Reference value: 9.351562, Our value: -0.157715
+     At window boundary: False
+  5. Diff=9.445312 at (batch=0, seq=4, head=0, dim=93)
+     Block indices: q_block=0, k_block=0
+     Reference value: 9.304688, Our value: -0.144043
+     At window boundary: False
+
+=== MIXED MASK VALUES AT ERROR LOCATIONS ===
+
+Mixed mask values for top dQ differences:
+  1. Location: (batch=0, seq=0, head=13, dim=30)
+     Q block: 0
+     K blocks with non-zero mask: [(3, True)]
+  2. Location: (batch=0, seq=1, head=21, dim=83)
+     Q block: 0
+     K blocks with non-zero mask: [(2, True), (3, True)]
+  3. Location: (batch=0, seq=0, head=13, dim=29)
+     Q block: 0
+     K blocks with non-zero mask: [(3, True)]
+  4. Location: (batch=0, seq=1, head=21, dim=125)
+     Q block: 0
+     K blocks with non-zero mask: [(2, True), (3, True)]
+  5. Location: (batch=0, seq=3, head=27, dim=10)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True)]
+
+Mixed mask values for top dK differences:
+  1. Location: (batch=0, seq=4, head=0, dim=11)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+  2. Location: (batch=0, seq=0, head=1, dim=43)
+     Q block: 0
+     K blocks with non-zero mask: [(3, True)]
+  3. Location: (batch=0, seq=1, head=1, dim=43)
+     Q block: 0
+     K blocks with non-zero mask: [(2, True), (3, True)]
+  4. Location: (batch=0, seq=1, head=0, dim=120)
+     Q block: 0
+     K blocks with non-zero mask: [(2, True), (3, True)]
+  5. Location: (batch=0, seq=2, head=0, dim=101)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True)]
+
+Mixed mask values for top dV differences:
+  1. Location: (batch=0, seq=1, head=1, dim=39)
+     Q block: 0
+     K blocks with non-zero mask: [(2, True), (3, True)]
+  2. Location: (batch=0, seq=0, head=0, dim=37)
+     Q block: 0
+     K blocks with non-zero mask: [(3, True)]
+  3. Location: (batch=0, seq=2, head=1, dim=61)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True)]
+  4. Location: (batch=0, seq=8, head=0, dim=83)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (3, True)]
+  5. Location: (batch=0, seq=4, head=0, dim=93)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
 
 === BASE BLOCK MASK STRUCTURE ===
 Active blocks per head: [18414, 18414]
@@ -4464,165 +4569,51 @@ Sample of topk_idx values (first 10 per head):
 📊 Test Summary: Forward Pass = PASSED, Backward Pass = FAILED
 
 ================================================================================
-Running test with config: (2048, 2048, 128, False, torch.float16, 0.8, 1, 32, 2, 0)
+Running test with config: (2048, 2048, 128, True, torch.float16, 0.8, 1, 32, 2, 2)
 ================================================================================
-Output max diff: 0.00048828125
-Output mean diff: 1.1682510375976562e-05
-Pytorch max diff: 0.0009765625
-Pytorch mean diff: 3.361701965332031e-05
+Output max diff: 0.001953125
+Output mean diff: 1.5139579772949219e-05
+Pytorch max diff: 0.001953125
+Pytorch mean diff: 4.309415817260742e-05
 
 === DETAILED FORWARD PASS DIFFERENCE ANALYSIS ===
 Top 5 forward pass differences:
-  1. Diff=0.000488 at (batch=0, seq=1549, head=27, dim=49)
-     Block index: q_block=24
-     Reference value: 0.555176, Our value: 0.555664, PyTorch value: 0.555664
-  2. Diff=0.000488 at (batch=0, seq=1943, head=21, dim=94)
-     Block index: q_block=30
-     Reference value: -0.510742, Our value: -0.510254, PyTorch value: -0.511230
-  3. Diff=0.000244 at (batch=0, seq=0, head=6, dim=114)
+  1. Diff=0.001953 at (batch=0, seq=0, head=21, dim=109)
      Block index: q_block=0
-     Reference value: 0.250000, Our value: 0.250244, PyTorch value: 0.250000
-  4. Diff=0.000244 at (batch=0, seq=2, head=29, dim=104)
+     Reference value: -2.328125, Our value: -2.330078, PyTorch value: -2.328125
+     Near block boundary: True (position within block: 0)
+  2. Diff=0.001953 at (batch=0, seq=1, head=13, dim=88)
      Block index: q_block=0
-     Reference value: 0.254883, Our value: 0.254639, PyTorch value: 0.254883
-  5. Diff=0.000244 at (batch=0, seq=3, head=8, dim=22)
+     Reference value: -2.066406, Our value: -2.068359, PyTorch value: -2.068359
+     Near block boundary: True (position within block: 1)
+  3. Diff=0.001953 at (batch=0, seq=1, head=25, dim=109)
      Block index: q_block=0
-     Reference value: 0.276123, Our value: 0.275879, PyTorch value: 0.276123
-dQ max diff: 3.232421875
-dK max diff: 12.2890625
-dV max diff: 23.46875
-dQ mean diff: 0.155029296875
-dK mean diff: 0.86962890625
-dV mean diff: 3.109375
-dQ Pytorch max diff: 0.00146484375
-dK Pytorch max diff: 0.001953125
-dV Pytorch max diff: 0.00146484375
-dQ Pytorch mean diff: 4.112720489501953e-05
-dK Pytorch mean diff: 0.00017964839935302734
-dV Pytorch mean diff: 0.00014889240264892578
+     Reference value: -2.369141, Our value: -2.367188, PyTorch value: -2.369141
+     Near block boundary: True (position within block: 1)
+  4. Diff=0.001953 at (batch=0, seq=3, head=31, dim=109)
+     Block index: q_block=0
+     Reference value: -2.035156, Our value: -2.033203, PyTorch value: -2.033203
+     Near block boundary: False (position within block: 3)
+  5. Diff=0.001953 at (batch=0, seq=4, head=1, dim=88)
+     Block index: q_block=0
+     Reference value: -2.025391, Our value: -2.023438, PyTorch value: -2.023438
+     Near block boundary: False (position within block: 4)
+dQ max diff: 3.630859375
+dK max diff: 10.7265625
+dV max diff: 9.8125
+dQ mean diff: 0.087890625
+dK mean diff: 0.325439453125
+dV mean diff: 0.345458984375
+dQ Pytorch max diff: 0.001953125
+dK Pytorch max diff: 0.005859375
+dV Pytorch max diff: 0.0078125
+dQ Pytorch mean diff: 5.1915645599365234e-05
+dK Pytorch mean diff: 0.000209808349609375
+dV Pytorch mean diff: 0.0001766681671142578
 ✅ FORWARD PASS: PASSED - infllmv2_sparse_attention matches reference within tolerance
 ❌ BACKWARD PASS: FAILED - Gradient differences exceed tolerance
 
-=== DETAILED GRADIENT ANALYSIS ===
-Block window size: 0
-
-Top 5 dQ differences:
-  1. Diff=3.232422 at (batch=0, seq=1672, head=4, dim=118)
-     Block indices: q_block=26, k_block=26
-     Reference value: -0.086731, Our value: 3.146484
-  2. Diff=3.166016 at (batch=0, seq=1860, head=28, dim=2)
-     Block indices: q_block=29, k_block=29
-     Reference value: 0.044373, Our value: -3.121094
-  3. Diff=3.054688 at (batch=0, seq=906, head=14, dim=103)
-     Block indices: q_block=14, k_block=14
-     Reference value: 0.053558, Our value: 3.107422
-  4. Diff=2.998047 at (batch=0, seq=1860, head=28, dim=126)
-     Block indices: q_block=29, k_block=29
-     Reference value: 0.138184, Our value: 3.136719
-  5. Diff=2.886719 at (batch=0, seq=1672, head=4, dim=42)
-     Block indices: q_block=26, k_block=26
-     Reference value: -0.129517, Our value: 2.757812
-
-Top 5 dK differences:
-  1. Diff=12.289062 at (batch=0, seq=575, head=1, dim=45)
-     Block indices: q_block=8, k_block=8
-     Reference value: 0.181763, Our value: 12.468750
-  2. Diff=11.039062 at (batch=0, seq=343, head=1, dim=107)
-     Block indices: q_block=5, k_block=5
-     Reference value: -0.109619, Our value: 10.929688
-  3. Diff=10.789062 at (batch=0, seq=812, head=1, dim=87)
-     Block indices: q_block=12, k_block=12
-     Reference value: -0.431885, Our value: 10.359375
-  4. Diff=10.625000 at (batch=0, seq=575, head=1, dim=39)
-     Block indices: q_block=8, k_block=8
-     Reference value: 0.055695, Our value: -10.570312
-  5. Diff=10.507812 at (batch=0, seq=476, head=1, dim=107)
-     Block indices: q_block=7, k_block=7
-     Reference value: -0.041992, Our value: 10.468750
-
-Top 5 dV differences:
-  1. Diff=23.468750 at (batch=0, seq=38, head=1, dim=6)
-     Block indices: q_block=0, k_block=0
-     Reference value: -0.181885, Our value: -23.656250
-  2. Diff=21.375000 at (batch=0, seq=1591, head=0, dim=81)
-     Block indices: q_block=24, k_block=24
-     Reference value: -1.120117, Our value: 20.250000
-  3. Diff=21.359375 at (batch=0, seq=1505, head=1, dim=113)
-     Block indices: q_block=23, k_block=23
-     Reference value: -0.246826, Our value: 21.109375
-  4. Diff=20.843750 at (batch=0, seq=187, head=1, dim=90)
-     Block indices: q_block=2, k_block=2
-     Reference value: 0.304688, Our value: -20.546875
-  5. Diff=20.203125 at (batch=0, seq=869, head=1, dim=95)
-     Block indices: q_block=13, k_block=13
-     Reference value: -0.964844, Our value: 19.234375
-
-=== MIXED MASK VALUES AT ERROR LOCATIONS ===
-
-Mixed mask values for top dQ differences:
-  1. Location: (batch=0, seq=1672, head=4, dim=118)
-     Q block: 26
-     K blocks with non-zero mask: [(25, True), (27, True)]
-  2. Location: (batch=0, seq=1860, head=28, dim=2)
-     Q block: 29
-     K blocks with non-zero mask: [(28, True), (29, True), (30, True)]
-  3. Location: (batch=0, seq=906, head=14, dim=103)
-     Q block: 14
-     K blocks with non-zero mask: [(13, True), (14, True), (15, True)]
-  4. Location: (batch=0, seq=1860, head=28, dim=126)
-     Q block: 29
-     K blocks with non-zero mask: [(28, True), (29, True), (30, True)]
-  5. Location: (batch=0, seq=1672, head=4, dim=42)
-     Q block: 26
-     K blocks with non-zero mask: [(25, True), (27, True)]
-
-Mixed mask values for top dK differences:
-  1. Location: (batch=0, seq=575, head=1, dim=45)
-     Q block: 8
-     K blocks with non-zero mask: [(7, True), (8, True)]
-  2. Location: (batch=0, seq=343, head=1, dim=107)
-     Q block: 5
-     K blocks with non-zero mask: [(4, True), (5, True), (6, True)]
-  3. Location: (batch=0, seq=812, head=1, dim=87)
-     Q block: 12
-     K blocks with non-zero mask: [(11, True), (12, True)]
-  4. Location: (batch=0, seq=575, head=1, dim=39)
-     Q block: 8
-     K blocks with non-zero mask: [(7, True), (8, True)]
-  5. Location: (batch=0, seq=476, head=1, dim=107)
-     Q block: 7
-     K blocks with non-zero mask: [(6, True), (7, True), (8, True)]
-
-Mixed mask values for top dV differences:
-  1. Location: (batch=0, seq=38, head=1, dim=6)
-     Q block: 0
-     K blocks with non-zero mask: [(0, True), (1, True)]
-  2. Location: (batch=0, seq=1591, head=0, dim=81)
-     Q block: 24
-     K blocks with non-zero mask: [(23, True), (24, True), (25, True)]
-  3. Location: (batch=0, seq=1505, head=1, dim=113)
-     Q block: 23
-     K blocks with non-zero mask: [(22, True), (23, True), (24, True)]
-  4. Location: (batch=0, seq=187, head=1, dim=90)
-     Q block: 2
-     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
-  5. Location: (batch=0, seq=869, head=1, dim=95)
-     Q block: 13
-     K blocks with non-zero mask: [(13, True), (14, True)]
-
-=== BASE BLOCK MASK STRUCTURE ===
-Active blocks per head: [12276, 12276]
-Total blocks: 961
-
-=== TOPK INDICES STRUCTURE ===
-topk_idx shape: torch.Size([2, 2046, 6])
-Sample of topk_idx values (first 10 per head):
-  Head 0: [[1, 2, 8, 12, 14, 29], [4, 7, 18, 22, 28, 29], [0, 3, 12, 16, 23, 30], [2, 7, 8, 14, 15, 30], [6, 7, 20, 24, 25, 28], [2, 13, 21, 22, 28, 30], [3, 4, 14, 18, 24, 25], [0, 1, 11, 12, 16, 25], [2, 12, 13, 23, 27, 29], [4, 12, 13, 17, 23, 29]]
-  Head 1: [[10, 19, 24, 25, 29, 31], [0, 3, 5, 9, 23, 28], [3, 4, 7, 12, 13, 24], [0, 6, 8, 16, 24, 27], [1, 8, 13, 15, 23, 26], [6, 7, 17, 22, 23, 31], [4, 7, 13, 22, 23, 30], [6, 12, 13, 25, 26, 30], [11, 15, 17, 25, 26, 29], [2, 8, 24, 25, 29, 30]][fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=512, params.num_blocks_n=4, params.block_window_size=0, k_window_right=0, k_window_left=1
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=0
-[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=512, params.num_blocks_n=4, params.block_window_size=0, k_window_right=0, k_window_left=1
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=0
-[bwdIterator init]: max_block_idx=256, binfo.actual_seqlen_q=4096, params.m_block_dim=16, q_bit_position=0, q_uint64_idx=0, k_block_idx=0, uint64_per_row=8
+=== DETAILED GRADIENT ANALYSIS ===[bwdIterator init]: max_block_idx=256, binfo.actual_seqlen_q=4096, params.m_block_dim=16, q_bit_position=0, q_uint64_idx=0, k_block_idx=0, uint64_per_row=8
 [bwd empty_col_flag]: empty_col_flag=0, max_no_larger_idx=255, m_block_min=0, m_block_max=256
 [bwd before gemm] bidh=0, m_block=255, n_block=0 -> next_block_row_idx=254 (next_leap=1)
 [bwd before gemm] bidh=0, m_block=254, n_block=0 -> next_block_row_idx=253 (next_leap=1)
@@ -4880,14 +4871,201 @@ Sample of topk_idx values (first 10 per head):
 [bwd before gemm] bidh=0, m_block=2, n_block=0 -> next_block_row_idx=1 (next_leap=1)
 [bwd before gemm] bidh=0, m_block=1, n_block=0 -> next_block_row_idx=0 (next_leap=1)
 [bwd before gemm] bidh=0, m_block=0, n_block=0 -> next_block_row_idx=0 (next_leap=0)
-[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=2033, params.num_blocks_n=16, params.block_window_size=0, k_window_right=0, k_window_left=1
-[fwd before gemm] bidh=0, m_block=0, n_block=15
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=6
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=5
-[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=2033, params.num_blocks_n=16, params.block_window_size=0, k_window_right=0, k_window_left=1
-[fwd before gemm] bidh=0, m_block=0, n_block=15
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=6
-[fwd before gemm second loop] bidh=0, m_block=0, n_block=5
+
+Block window size: 2
+
+Top 5 dQ differences:
+  1. Diff=3.630859 at (batch=0, seq=0, head=13, dim=30)
+     Block indices: q_block=0, k_block=0
+     Reference value: 3.630859, Our value: 0.000000
+     At window boundary: False
+  2. Diff=3.232422 at (batch=0, seq=1, head=21, dim=83)
+     Block indices: q_block=0, k_block=0
+     Reference value: -3.232422, Our value: 0.000000
+     At window boundary: False
+  3. Diff=2.949219 at (batch=0, seq=0, head=13, dim=29)
+     Block indices: q_block=0, k_block=0
+     Reference value: -2.949219, Our value: 0.000000
+     At window boundary: False
+  4. Diff=2.884766 at (batch=0, seq=1, head=21, dim=125)
+     Block indices: q_block=0, k_block=0
+     Reference value: -2.884766, Our value: 0.000000
+     At window boundary: False
+  5. Diff=2.867188 at (batch=0, seq=3, head=27, dim=10)
+     Block indices: q_block=0, k_block=0
+     Reference value: -2.867188, Our value: 0.000000
+     At window boundary: False
+
+Top 5 dK differences:
+  1. Diff=10.726562 at (batch=0, seq=4, head=0, dim=11)
+     Block indices: q_block=0, k_block=0
+     Reference value: -10.593750, Our value: 0.135010
+     At window boundary: False
+  2. Diff=8.562500 at (batch=0, seq=0, head=1, dim=43)
+     Block indices: q_block=0, k_block=0
+     Reference value: 8.507812, Our value: -0.053436
+     At window boundary: False
+  3. Diff=7.976562 at (batch=0, seq=1, head=1, dim=43)
+     Block indices: q_block=0, k_block=0
+     Reference value: -7.898438, Our value: 0.079895
+     At window boundary: False
+  4. Diff=7.679688 at (batch=0, seq=1, head=0, dim=120)
+     Block indices: q_block=0, k_block=0
+     Reference value: -7.847656, Our value: -0.168579
+     At window boundary: False
+  5. Diff=7.531250 at (batch=0, seq=1, head=1, dim=101)
+     Block indices: q_block=0, k_block=0
+     Reference value: 7.253906, Our value: -0.277832
+     At window boundary: False
+
+Top 5 dV differences:
+  1. Diff=9.812500 at (batch=0, seq=1, head=1, dim=39)
+     Block indices: q_block=0, k_block=0
+     Reference value: -9.984375, Our value: -0.168579
+     At window boundary: False
+  2. Diff=9.718750 at (batch=0, seq=0, head=1, dim=43)
+     Block indices: q_block=0, k_block=0
+     Reference value: 9.843750, Our value: 0.121094
+     At window boundary: False
+  3. Diff=9.664062 at (batch=0, seq=0, head=0, dim=37)
+     Block indices: q_block=0, k_block=0
+     Reference value: -9.429688, Our value: 0.233398
+     At window boundary: False
+  4. Diff=9.546875 at (batch=0, seq=2, head=1, dim=61)
+     Block indices: q_block=0, k_block=0
+     Reference value: 9.671875, Our value: 0.124756
+     At window boundary: False
+  5. Diff=9.406250 at (batch=0, seq=8, head=0, dim=83)
+     Block indices: q_block=0, k_block=0
+     Reference value: 9.203125, Our value: -0.203613
+     At window boundary: False
+
+=== MIXED MASK VALUES AT ERROR LOCATIONS ===
+
+Mixed mask values for top dQ differences:
+  1. Location: (batch=0, seq=0, head=13, dim=30)
+     Q block: 0
+     K blocks with non-zero mask: [(3, True)]
+  2. Location: (batch=0, seq=1, head=21, dim=83)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+  3. Location: (batch=0, seq=0, head=13, dim=29)
+     Q block: 0
+     K blocks with non-zero mask: [(3, True)]
+  4. Location: (batch=0, seq=1, head=21, dim=125)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+  5. Location: (batch=0, seq=3, head=27, dim=10)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (3, True)]
+
+Mixed mask values for top dK differences:
+  1. Location: (batch=0, seq=4, head=0, dim=11)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+  2. Location: (batch=0, seq=0, head=1, dim=43)
+     Q block: 0
+     K blocks with non-zero mask: [(3, True)]
+  3. Location: (batch=0, seq=1, head=1, dim=43)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+  4. Location: (batch=0, seq=1, head=0, dim=120)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+  5. Location: (batch=0, seq=1, head=1, dim=101)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+
+Mixed mask values for top dV differences:
+  1. Location: (batch=0, seq=1, head=1, dim=39)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+  2. Location: (batch=0, seq=0, head=1, dim=43)
+     Q block: 0
+     K blocks with non-zero mask: [(3, True)]
+  3. Location: (batch=0, seq=0, head=0, dim=37)
+     Q block: 0
+     K blocks with non-zero mask: [(3, True)]
+  4. Location: (batch=0, seq=2, head=1, dim=61)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True)]
+  5. Location: (batch=0, seq=8, head=0, dim=83)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (3, True)]
+
+=== BASE BLOCK MASK STRUCTURE ===
+Active blocks per head: [12276, 12276]
+Total blocks: 961
+
+=== TOPK INDICES STRUCTURE ===
+topk_idx shape: torch.Size([2, 2046, 6])
+Sample of topk_idx values (first 10 per head):
+  Head 0: [[1, 2, 8, 12, 14, 29], [4, 7, 18, 22, 28, 29], [0, 3, 12, 16, 23, 30], [2, 7, 8, 14, 15, 30], [6, 7, 20, 24, 25, 28], [2, 13, 21, 22, 28, 30], [3, 4, 14, 18, 24, 25], [0, 1, 11, 12, 16, 25], [2, 12, 13, 23, 27, 29], [4, 12, 13, 17, 23, 29]]
+  Head 1: [[10, 19, 24, 25, 29, 31], [0, 3, 5, 9, 23, 28], [3, 4, 7, 12, 13, 24], [0, 6, 8, 16, 24, 27], [1, 8, 13, 15, 23, 26], [6, 7, 17, 22, 23, 31], [4, 7, 13, 22, 23, 30], [6, 12, 13, 25, 26, 30], [11, 15, 17, 25, 26, 29], [2, 8, 24, 25, 29, 30]]
+
+📊 Test Summary: Forward Pass = PASSED, Backward Pass = FAILED
+
+================================================================================
+Running test with config: (256, 256, 128, True, torch.float16, 0.7, 2, 32, 2, 8)
+================================================================================
+Output max diff: 0.001953125
+Output mean diff: 2.092123031616211e-05
+Pytorch max diff: 0.001953125
+Pytorch mean diff: 5.823373794555664e-05
+
+=== DETAILED FORWARD PASS DIFFERENCE ANALYSIS ===
+Top 5 forward pass differences:
+  1. Diff=0.001953 at (batch=0, seq=8, head=7, dim=67)
+     Block index: q_block=0
+     Reference value: -2.486328, Our value: -2.488281, PyTorch value: -2.488281
+     Near block boundary: False (position within block: 8)
+  2. Diff=0.001953 at (batch=0, seq=8, head=7, dim=70)
+     Block index: q_block=0
+     Reference value: -2.171875, Our value: -2.173828, PyTorch value: -2.173828
+     Near block boundary: False (position within block: 8)
+  3. Diff=0.001953 at (batch=0, seq=11, head=11, dim=95)
+     Block index: q_block=0
+     Reference value: 2.357422, Our value: 2.359375, PyTorch value: 2.359375
+     Near block boundary: False (position within block: 11)
+  4. Diff=0.001953 at (batch=0, seq=11, head=12, dim=67)
+     Block index: q_block=0
+     Reference value: -2.138672, Our value: -2.140625, PyTorch value: -2.140625
+     Near block boundary: False (position within block: 11)
+  5. Diff=0.000977 at (batch=0, seq=8, head=0, dim=90)
+     Block index: q_block=0
+     Reference value: -1.004883, Our value: -1.003906, PyTorch value: -1.003906
+     Near block boundary: False (position within block: 8)
+dQ max diff: 4.30859375
+dK max diff: 10.296875
+dV max diff: 16.40625
+dQ mean diff: 0.11883544921875
+dK mean diff: 0.408203125
+dV mean diff: 0.449462890625
+dQ Pytorch max diff: 0.00390625
+dK Pytorch max diff: 0.005859375
+dV Pytorch max diff: 0.015625
+dQ Pytorch mean diff: 6.759166717529297e-05
+dK Pytorch mean diff: 0.00025773048400878906
+dV Pytorch mean diff: 0.0002276897430419922
+✅ FORWARD PASS: PASSED - infllmv2_sparse_attention matches reference within tolerance
+❌ BACKWARD PASS: FAILED - Gradient differences exceed tolerance
+
+=== DETAILED GRADIENT ANALYSIS ===
+Block window size: 8
+
+Top 5 dQ differences:
+  1. Diff=4.308594 at (batch=0, seq=13, head=4, dim=20)
+     Block indices: q_block=0, k_block=0
+     Reference value: -4.308594, Our value: 0.000000
+     At window boundary: False
+  2. Diff=3.376953 at (batch=1, seq=15, head=31, dim=83)
+     Block indices: q_block=0, k_block=0
+     Reference value: 3.376953, Our value: 0.000000
+     At window boundary: False
+  3. Diff=3.375000 at (batch=0, seq=9, head=23, dim=101)[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=2033, params.num_blocks_n=16, params.block_window_size=10, k_window_right=0, k_window_left=-9
+[fwd before gemm] bidh=0, m_block=0, n_block=0
+[fwdIterator init]: head_idx=0, params.m_block_dim=16, params.n_block_dim=64, params.num_blocks_m=2033, params.num_blocks_n=16, params.block_window_size=10, k_window_right=0, k_window_left=-9
+[fwd before gemm] bidh=0, m_block=0, n_block=0
 [bwdIterator init]: max_block_idx=1022, binfo.actual_seqlen_q=16352, params.m_block_dim=16, q_bit_position=0, q_uint64_idx=0, k_block_idx=0, uint64_per_row=32
 [bwd empty_col_flag]: empty_col_flag=0, max_no_larger_idx=1021, m_block_min=0, m_block_max=1022
 [bwd before gemm] bidh=0, m_block=1021, n_block=0 -> next_block_row_idx=1020 (next_leap=1)
@@ -5913,155 +6091,114 @@ Sample of topk_idx values (first 10 per head):
 [bwd before gemm] bidh=0, m_block=1, n_block=0 -> next_block_row_idx=0 (next_leap=1)
 [bwd before gemm] bidh=0, m_block=0, n_block=0 -> next_block_row_idx=0 (next_leap=0)
 
-
-📊 Test Summary: Forward Pass = PASSED, Backward Pass = FAILED
-
-================================================================================
-Running test with config: (256, 256, 128, False, torch.float16, 0.7, 2, 32, 2, 0)
-================================================================================
-Output max diff: 0.0009765625
-Output mean diff: 2.568960189819336e-05
-Pytorch max diff: 0.001953125
-Pytorch mean diff: 7.021427154541016e-05
-
-=== DETAILED FORWARD PASS DIFFERENCE ANALYSIS ===
-Top 5 forward pass differences:
-  1. Diff=0.000977 at (batch=0, seq=51, head=21, dim=124)
-     Block index: q_block=0
-     Reference value: 1.348633, Our value: 1.347656, PyTorch value: 1.349609
-  2. Diff=0.000977 at (batch=0, seq=52, head=27, dim=87)
-     Block index: q_block=0
-     Reference value: 1.033203, Our value: 1.034180, PyTorch value: 1.034180
-  3. Diff=0.000977 at (batch=0, seq=134, head=9, dim=44)
-     Block index: q_block=2
-     Reference value: 1.074219, Our value: 1.073242, PyTorch value: 1.073242
-  4. Diff=0.000977 at (batch=0, seq=192, head=31, dim=10)
-     Block index: q_block=3
-     Reference value: 1.044922, Our value: 1.043945, PyTorch value: 1.043945
-  5. Diff=0.000977 at (batch=1, seq=18, head=2, dim=112)
-     Block index: q_block=0
-     Reference value: 1.012695, Our value: 1.013672, PyTorch value: 1.012695
-dQ max diff: 8.7890625
-dK max diff: 13.984375
-dV max diff: 17.609375
-dQ mean diff: 0.330322265625
-dK mean diff: 1.4501953125
-dV mean diff: 2.6875
-dQ Pytorch max diff: 0.001953125
-dK Pytorch max diff: 0.00390625
-dV Pytorch max diff: 0.00390625
-dQ Pytorch mean diff: 8.14199447631836e-05
-dK Pytorch mean diff: 0.00036644935607910156
-dV Pytorch mean diff: 0.0003197193145751953
-✅ FORWARD PASS: PASSED - infllmv2_sparse_attention matches reference within tolerance
-❌ BACKWARD PASS: FAILED - Gradient differences exceed tolerance
-
-=== DETAILED GRADIENT ANALYSIS ===
-Block window size: 0
-
-Top 5 dQ differences:
-  1. Diff=8.789062 at (batch=1, seq=50, head=23, dim=12)
      Block indices: q_block=0, k_block=0
-     Reference value: -0.208374, Our value: -9.000000
-  2. Diff=8.648438 at (batch=1, seq=50, head=23, dim=87)
+     Reference value: 3.375000, Our value: 0.000000
+     At window boundary: False
+  4. Diff=3.332031 at (batch=0, seq=11, head=3, dim=20)
      Block indices: q_block=0, k_block=0
-     Reference value: -0.348389, Our value: -9.000000
-  3. Diff=8.203125 at (batch=1, seq=50, head=23, dim=57)
+     Reference value: -3.332031, Our value: 0.000000
+     At window boundary: False
+  5. Diff=3.009766 at (batch=1, seq=15, head=31, dim=52)
      Block indices: q_block=0, k_block=0
-     Reference value: -0.544922, Our value: 7.660156
-  4. Diff=7.863281 at (batch=0, seq=157, head=15, dim=119)
-     Block indices: q_block=2, k_block=2
-     Reference value: 0.377197, Our value: 8.242188
-  5. Diff=7.378906 at (batch=0, seq=139, head=28, dim=5)
-     Block indices: q_block=2, k_block=2
-     Reference value: 0.475342, Our value: 7.855469
+     Reference value: 3.009766, Our value: 0.000000
+     At window boundary: False
 
 Top 5 dK differences:
-  1. Diff=13.984375 at (batch=0, seq=212, head=1, dim=64)
-     Block indices: q_block=3, k_block=3
-     Reference value: 0.902832, Our value: -13.078125
-  2. Diff=11.414062 at (batch=1, seq=16, head=1, dim=48)
+  1. Diff=10.296875 at (batch=0, seq=1, head=1, dim=35)
      Block indices: q_block=0, k_block=0
-     Reference value: 2.125000, Our value: -9.289062
-  3. Diff=11.242188 at (batch=1, seq=54, head=1, dim=13)
+     Reference value: 10.257812, Our value: -0.041779
+     At window boundary: False
+  2. Diff=8.851562 at (batch=1, seq=2, head=1, dim=10)
      Block indices: q_block=0, k_block=0
-     Reference value: -0.860352, Our value: 10.382812
-  4. Diff=11.148438 at (batch=0, seq=149, head=1, dim=15)
-     Block indices: q_block=2, k_block=2
-     Reference value: 1.483398, Our value: -9.664062
-  5. Diff=10.968750 at (batch=0, seq=119, head=0, dim=127)
-     Block indices: q_block=1, k_block=1
-     Reference value: 0.546875, Our value: -10.421875
+     Reference value: -8.835938, Our value: 0.012268
+     At window boundary: False
+  3. Diff=8.320312 at (batch=1, seq=0, head=1, dim=13)
+     Block indices: q_block=0, k_block=0
+     Reference value: -8.187500, Our value: 0.135620
+     At window boundary: False
+  4. Diff=7.761719 at (batch=0, seq=2, head=1, dim=115)
+     Block indices: q_block=0, k_block=0
+     Reference value: 7.742188, Our value: -0.018677
+     At window boundary: False
+  5. Diff=7.617188 at (batch=1, seq=2, head=0, dim=85)
+     Block indices: q_block=0, k_block=0
+     Reference value: -7.691406, Our value: -0.073181
+     At window boundary: False
 
 Top 5 dV differences:
-  1. Diff=17.609375 at (batch=1, seq=54, head=1, dim=24)
+  1. Diff=16.406250 at (batch=1, seq=0, head=0, dim=27)
      Block indices: q_block=0, k_block=0
-     Reference value: -0.535645, Our value: -18.140625
-  2. Diff=17.578125 at (batch=0, seq=92, head=0, dim=98)
-     Block indices: q_block=1, k_block=1
-     Reference value: -1.752930, Our value: 15.828125
-  3. Diff=17.000000 at (batch=1, seq=163, head=1, dim=59)
-     Block indices: q_block=2, k_block=2
-     Reference value: -0.170898, Our value: 16.828125
-  4. Diff=16.656250 at (batch=0, seq=240, head=1, dim=64)
-     Block indices: q_block=3, k_block=3
-     Reference value: -0.972656, Our value: 15.679688
-  5. Diff=16.625000 at (batch=1, seq=111, head=1, dim=12)
-     Block indices: q_block=1, k_block=1
-     Reference value: 1.542969, Our value: -15.078125
+     Reference value: -16.406250, Our value: 0.001472
+     At window boundary: False
+  2. Diff=12.984375 at (batch=1, seq=0, head=0, dim=0)
+     Block indices: q_block=0, k_block=0
+     Reference value: -12.898438, Our value: 0.087341
+     At window boundary: False
+  3. Diff=12.968750 at (batch=1, seq=0, head=1, dim=30)
+     Block indices: q_block=0, k_block=0
+     Reference value: 12.726562, Our value: -0.245728
+     At window boundary: False
+  4. Diff=12.937500 at (batch=0, seq=0, head=1, dim=115)
+     Block indices: q_block=0, k_block=0
+     Reference value: -12.890625, Our value: 0.047974
+     At window boundary: False
+  5. Diff=12.265625 at (batch=1, seq=0, head=0, dim=19)
+     Block indices: q_block=0, k_block=0
+     Reference value: -12.375000, Our value: -0.105469
+     At window boundary: False
 
 === MIXED MASK VALUES AT ERROR LOCATIONS ===
 
 Mixed mask values for top dQ differences:
-  1. Location: (batch=1, seq=50, head=23, dim=12)
+  1. Location: (batch=0, seq=13, head=4, dim=20)
      Q block: 0
-     K blocks with non-zero mask: [(0, True), (1, True)]
-  2. Location: (batch=1, seq=50, head=23, dim=87)
+     K blocks with non-zero mask: [(2, True), (3, True)]
+  2. Location: (batch=1, seq=15, head=31, dim=83)
      Q block: 0
-     K blocks with non-zero mask: [(0, True), (1, True)]
-  3. Location: (batch=1, seq=50, head=23, dim=57)
+     K blocks with non-zero mask: [(1, True), (3, True)]
+  3. Location: (batch=0, seq=9, head=23, dim=101)
      Q block: 0
-     K blocks with non-zero mask: [(0, True), (1, True)]
-  4. Location: (batch=0, seq=157, head=15, dim=119)
-     Q block: 2
-     K blocks with non-zero mask: [(1, True), (2, True)]
-  5. Location: (batch=0, seq=139, head=28, dim=5)
-     Q block: 2
      K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+  4. Location: (batch=0, seq=11, head=3, dim=20)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (3, True)]
+  5. Location: (batch=1, seq=15, head=31, dim=52)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (3, True)]
 
 Mixed mask values for top dK differences:
-  1. Location: (batch=0, seq=212, head=1, dim=64)
-     Q block: 3
-     K blocks with non-zero mask: [(3, True)]
-  2. Location: (batch=1, seq=16, head=1, dim=48)
+  1. Location: (batch=0, seq=1, head=1, dim=35)
      Q block: 0
-     K blocks with non-zero mask: [(0, True), (1, True)]
-  3. Location: (batch=1, seq=54, head=1, dim=13)
+     K blocks with non-zero mask: [(0, True), (1, True), (3, True)]
+  2. Location: (batch=1, seq=2, head=1, dim=10)
      Q block: 0
-     K blocks with non-zero mask: [(0, True)]
-  4. Location: (batch=0, seq=149, head=1, dim=15)
-     Q block: 2
-     K blocks with non-zero mask: [(1, True), (2, True)]
-  5. Location: (batch=0, seq=119, head=0, dim=127)
-     Q block: 1
-     K blocks with non-zero mask: [(0, True), (2, True)]
+     K blocks with non-zero mask: [(0, True), (1, True), (3, True)]
+  3. Location: (batch=1, seq=0, head=1, dim=13)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+  4. Location: (batch=0, seq=2, head=1, dim=115)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+  5. Location: (batch=1, seq=2, head=0, dim=85)
+     Q block: 0
+     K blocks with non-zero mask: [(0, True), (1, True), (3, True)]
 
 Mixed mask values for top dV differences:
-  1. Location: (batch=1, seq=54, head=1, dim=24)
+  1. Location: (batch=1, seq=0, head=0, dim=27)
      Q block: 0
-     K blocks with non-zero mask: [(0, True)]
-  2. Location: (batch=0, seq=92, head=0, dim=98)
-     Q block: 1
-     K blocks with non-zero mask: [(1, True), (2, True)]
-  3. Location: (batch=1, seq=163, head=1, dim=59)
-     Q block: 2
-     K blocks with non-zero mask: [(1, True), (3, True)]
-  4. Location: (batch=0, seq=240, head=1, dim=64)
-     Q block: 3
-     K blocks with non-zero mask: [(2, True), (3, True)]
-  5. Location: (batch=1, seq=111, head=1, dim=12)
-     Q block: 1
-     K blocks with non-zero mask: [(0, True), (1, True)]
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+  2. Location: (batch=1, seq=0, head=0, dim=0)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+  3. Location: (batch=1, seq=0, head=1, dim=30)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+  4. Location: (batch=0, seq=0, head=1, dim=115)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
+  5. Location: (batch=1, seq=0, head=0, dim=19)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True)]
 
 === BASE BLOCK MASK STRUCTURE ===
 Active blocks per head: [512, 512]
@@ -6076,151 +6213,171 @@ Sample of topk_idx values (first 10 per head):
 📊 Test Summary: Forward Pass = PASSED, Backward Pass = FAILED
 
 ================================================================================
-Running test with config: (1024, 1024, 128, False, torch.float16, 0.8, 2, 32, 2, 0)
+Running test with config: (1024, 1024, 128, True, torch.float16, 0.8, 2, 32, 2, 10)
 ================================================================================
-Output max diff: 0.0009765625
-Output mean diff: 1.5795230865478516e-05
-Pytorch max diff: 0.00146484375
-Pytorch mean diff: 4.500150680541992e-05
+Output max diff: 0.001953125
+Output mean diff: 1.2934207916259766e-05
+Pytorch max diff: 0.001953125
+Pytorch mean diff: 3.6656856536865234e-05
 
 === DETAILED FORWARD PASS DIFFERENCE ANALYSIS ===
 Top 5 forward pass differences:
-  1. Diff=0.000977 at (batch=1, seq=2, head=31, dim=69)
+  1. Diff=0.001953 at (batch=0, seq=0, head=21, dim=109)
      Block index: q_block=0
-     Reference value: 1.015625, Our value: 1.016602, PyTorch value: 1.015625
-  2. Diff=0.000488 at (batch=0, seq=85, head=25, dim=24)
-     Block index: q_block=1
-     Reference value: 0.541504, Our value: 0.541016, PyTorch value: 0.541504
-  3. Diff=0.000488 at (batch=0, seq=99, head=23, dim=110)
-     Block index: q_block=1
-     Reference value: -0.554688, Our value: -0.555176, PyTorch value: -0.554688
-  4. Diff=0.000488 at (batch=0, seq=149, head=22, dim=119)
-     Block index: q_block=2
-     Reference value: 0.508301, Our value: 0.508789, PyTorch value: 0.507812
-  5. Diff=0.000488 at (batch=0, seq=161, head=31, dim=72)
-     Block index: q_block=2
-     Reference value: -0.530273, Our value: -0.530762, PyTorch value: -0.530273
-dQ max diff: 6.74609375
-dK max diff: 12.3984375
-dV max diff: 25.515625
-dQ mean diff: 0.2108154296875
-dK mean diff: 0.900390625
-dV mean diff: 1.9775390625
+     Reference value: -2.328125, Our value: -2.330078, PyTorch value: -2.328125
+     Near block boundary: True (position within block: 0)
+  2. Diff=0.001953 at (batch=0, seq=1, head=13, dim=88)
+     Block index: q_block=0
+     Reference value: -2.066406, Our value: -2.068359, PyTorch value: -2.068359
+     Near block boundary: True (position within block: 1)
+  3. Diff=0.001953 at (batch=0, seq=1, head=25, dim=109)
+     Block index: q_block=0
+     Reference value: -2.369141, Our value: -2.367188, PyTorch value: -2.369141
+     Near block boundary: True (position within block: 1)
+  4. Diff=0.001953 at (batch=0, seq=3, head=31, dim=109)
+     Block index: q_block=0
+     Reference value: -2.035156, Our value: -2.033203, PyTorch value: -2.033203
+     Near block boundary: False (position within block: 3)
+  5. Diff=0.001953 at (batch=0, seq=4, head=1, dim=88)
+     Block index: q_block=0
+     Reference value: -2.025391, Our value: -2.023438, PyTorch value: -2.023438
+     Near block boundary: False (position within block: 4)
+dQ max diff: 3.87109375
+dK max diff: 8.2890625
+dV max diff: 20.015625
+dQ mean diff: 0.07232666015625
+dK mean diff: 0.2464599609375
+dV mean diff: 0.2578125
 dQ Pytorch max diff: 0.001953125
-dK Pytorch max diff: 0.00213623046875
-dV Pytorch max diff: 0.00244140625
-dQ Pytorch mean diff: 5.418062210083008e-05
-dK Pytorch mean diff: 0.00024008750915527344
-dV Pytorch mean diff: 0.00020241737365722656
+dK Pytorch max diff: 0.005859375
+dV Pytorch max diff: 0.0078125
+dQ Pytorch mean diff: 4.410743713378906e-05
+dK Pytorch mean diff: 0.0001653432846069336
+dV Pytorch mean diff: 0.00013911724090576172
 ✅ FORWARD PASS: PASSED - infllmv2_sparse_attention matches reference within tolerance
 ❌ BACKWARD PASS: FAILED - Gradient differences exceed tolerance
 
 === DETAILED GRADIENT ANALYSIS ===
-Block window size: 0
+Block window size: 10
 
 Top 5 dQ differences:
-  1. Diff=6.746094 at (batch=0, seq=932, head=17, dim=62)
-     Block indices: q_block=14, k_block=14
-     Reference value: -0.171387, Our value: 6.574219
-  2. Diff=4.714844 at (batch=1, seq=252, head=22, dim=99)
-     Block indices: q_block=3, k_block=3
-     Reference value: -0.071716, Our value: 4.644531
-  3. Diff=4.710938 at (batch=0, seq=164, head=8, dim=63)
-     Block indices: q_block=2, k_block=2
-     Reference value: 0.034241, Our value: 4.746094
-  4. Diff=4.542969 at (batch=0, seq=932, head=17, dim=39)
-     Block indices: q_block=14, k_block=14
-     Reference value: -0.119751, Our value: -4.664062
-  5. Diff=4.414062 at (batch=0, seq=932, head=17, dim=123)
-     Block indices: q_block=14, k_block=14
-     Reference value: -0.077942, Our value: -4.492188
+  1. Diff=3.871094 at (batch=1, seq=7, head=11, dim=87)
+     Block indices: q_block=0, k_block=0
+     Reference value: -3.871094, Our value: 0.000000
+     At window boundary: False
+  2. Diff=3.056641 at (batch=1, seq=17, head=23, dim=31)
+     Block indices: q_block=0, k_block=0
+     Reference value: 3.056641, Our value: 0.000000
+     At window boundary: False
+  3. Diff=2.890625 at (batch=0, seq=0, head=25, dim=76)
+     Block indices: q_block=0, k_block=0
+     Reference value: 2.890625, Our value: 0.000000
+     At window boundary: False
+  4. Diff=2.833984 at (batch=1, seq=7, head=11, dim=4)
+     Block indices: q_block=0, k_block=0
+     Reference value: 2.833984, Our value: 0.000000
+     At window boundary: False
+  5. Diff=2.820312 at (batch=0, seq=10, head=7, dim=127)
+     Block indices: q_block=0, k_block=0
+     Reference value: 2.820312, Our value: 0.000000
+     At window boundary: False
 
 Top 5 dK differences:
-  1. Diff=12.398438 at (batch=0, seq=832, head=1, dim=16)
-     Block indices: q_block=13, k_block=13
-     Reference value: -0.041412, Our value: -12.437500
-  2. Diff=11.445312 at (batch=0, seq=70, head=0, dim=16)
-     Block indices: q_block=1, k_block=1
-     Reference value: 0.699707, Our value: 12.148438
-  3. Diff=10.828125 at (batch=0, seq=604, head=0, dim=96)
-     Block indices: q_block=9, k_block=9
-     Reference value: -1.094727, Our value: 9.734375
-  4. Diff=10.765625 at (batch=0, seq=640, head=1, dim=43)
-     Block indices: q_block=10, k_block=10
-     Reference value: 0.226562, Our value: 10.992188
-  5. Diff=10.484375 at (batch=0, seq=343, head=1, dim=97)
-     Block indices: q_block=5, k_block=5
-     Reference value: 0.675293, Our value: -9.812500
+  1. Diff=8.289062 at (batch=0, seq=0, head=0, dim=62)
+     Block indices: q_block=0, k_block=0
+     Reference value: 8.218750, Our value: -0.067810
+     At window boundary: False
+  2. Diff=8.250000 at (batch=1, seq=1, head=0, dim=126)
+     Block indices: q_block=0, k_block=0
+     Reference value: -8.304688, Our value: -0.053955
+     At window boundary: False
+  3. Diff=7.937500 at (batch=0, seq=1, head=1, dim=29)
+     Block indices: q_block=0, k_block=0
+     Reference value: 7.945312, Our value: 0.009109
+     At window boundary: False
+  4. Diff=7.898438 at (batch=1, seq=1, head=0, dim=95)
+     Block indices: q_block=0, k_block=0
+     Reference value: -7.765625, Our value: 0.130981
+     At window boundary: False
+  5. Diff=7.847656 at (batch=0, seq=2, head=0, dim=127)
+     Block indices: q_block=0, k_block=0
+     Reference value: -7.820312, Our value: 0.027542
+     At window boundary: False
 
 Top 5 dV differences:
-  1. Diff=25.515625 at (batch=0, seq=38, head=1, dim=6)
+  1. Diff=20.015625 at (batch=1, seq=0, head=0, dim=104)
      Block indices: q_block=0, k_block=0
-     Reference value: -0.007927, Our value: -25.531250
-  2. Diff=23.609375 at (batch=0, seq=905, head=1, dim=62)
-     Block indices: q_block=14, k_block=14
-     Reference value: -0.477051, Our value: 23.125000
-  3. Diff=21.250000 at (batch=0, seq=121, head=1, dim=89)
-     Block indices: q_block=1, k_block=1
-     Reference value: -0.419189, Our value: -21.671875
-  4. Diff=20.859375 at (batch=0, seq=444, head=0, dim=70)
-     Block indices: q_block=6, k_block=6
-     Reference value: 0.682617, Our value: -20.171875
-  5. Diff=20.343750 at (batch=0, seq=187, head=1, dim=90)
-     Block indices: q_block=2, k_block=2
-     Reference value: -0.981934, Our value: -21.328125
+     Reference value: 19.953125, Our value: -0.069519
+     At window boundary: False
+  2. Diff=17.343750 at (batch=1, seq=0, head=0, dim=85)
+     Block indices: q_block=0, k_block=0
+     Reference value: 17.359375, Our value: 0.016235
+     At window boundary: False
+  3. Diff=13.195312 at (batch=1, seq=0, head=0, dim=73)
+     Block indices: q_block=0, k_block=0
+     Reference value: -13.203125, Our value: -0.004036
+     At window boundary: False
+  4. Diff=12.890625 at (batch=0, seq=1, head=1, dim=100)
+     Block indices: q_block=0, k_block=0
+     Reference value: -12.757812, Our value: 0.131226
+     At window boundary: False
+  5. Diff=12.382812 at (batch=1, seq=0, head=0, dim=96)
+     Block indices: q_block=0, k_block=0
+     Reference value: -12.414062, Our value: -0.029251
+     At window boundary: False
 
 === MIXED MASK VALUES AT ERROR LOCATIONS ===
 
 Mixed mask values for top dQ differences:
-  1. Location: (batch=0, seq=932, head=17, dim=62)
-     Q block: 14
-     K blocks with non-zero mask: [(13, True), (14, True), (15, True)]
-  2. Location: (batch=1, seq=252, head=22, dim=99)
-     Q block: 3
-     K blocks with non-zero mask: [(2, True), (3, True), (4, True)]
-  3. Location: (batch=0, seq=164, head=8, dim=63)
-     Q block: 2
-     K blocks with non-zero mask: [(1, True)]
-  4. Location: (batch=0, seq=932, head=17, dim=39)
-     Q block: 14
-     K blocks with non-zero mask: [(13, True), (14, True), (15, True)]
-  5. Location: (batch=0, seq=932, head=17, dim=123)
-     Q block: 14
-     K blocks with non-zero mask: [(13, True), (14, True), (15, True)]
+  1. Location: (batch=1, seq=7, head=11, dim=87)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True), (4, True), (6, True), (8, True), (9, True), (10, True), (11, True)]
+  2. Location: (batch=1, seq=17, head=23, dim=31)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (5, True), (6, True), (7, True), (8, True), (9, True), (10, True), (11, True)]
+  3. Location: (batch=0, seq=0, head=25, dim=76)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True), (4, True), (7, True), (8, True), (9, True), (10, True), (11, True)]
+  4. Location: (batch=1, seq=7, head=11, dim=4)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True), (4, True), (6, True), (8, True), (9, True), (10, True), (11, True)]
+  5. Location: (batch=0, seq=10, head=7, dim=127)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (5, True), (6, True), (7, True), (8, True), (9, True), (10, True), (11, True)]
 
 Mixed mask values for top dK differences:
-  1. Location: (batch=0, seq=832, head=1, dim=16)
-     Q block: 13
-     K blocks with non-zero mask: [(12, True), (14, True)]
-  2. Location: (batch=0, seq=70, head=0, dim=16)
-     Q block: 1
-     K blocks with non-zero mask: [(0, True), (1, True), (2, True)]
-  3. Location: (batch=0, seq=604, head=0, dim=96)
-     Q block: 9
-     K blocks with non-zero mask: [(8, True), (9, True)]
-  4. Location: (batch=0, seq=640, head=1, dim=43)
-     Q block: 10
-     K blocks with non-zero mask: [(9, True), (11, True)]
-  5. Location: (batch=0, seq=343, head=1, dim=97)
-     Q block: 5
-     K blocks with non-zero mask: [(4, True), (5, True), (6, True)]
+  1. Location: (batch=0, seq=0, head=0, dim=62)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True), (4, True), (7, True), (8, True), (9, True), (10, True), (11, True)]
+  2. Location: (batch=1, seq=1, head=0, dim=126)
+     Q block: 0
+     K blocks with non-zero mask: [(3, True), (4, True), (5, True), (6, True), (7, True), (8, True), (9, True), (10, True), (11, True)]
+  3. Location: (batch=0, seq=1, head=1, dim=29)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (4, True), (5, True), (6, True), (7, True), (8, True), (10, True), (11, True)]
+  4. Location: (batch=1, seq=1, head=0, dim=95)
+     Q block: 0
+     K blocks with non-zero mask: [(3, True), (4, True), (5, True), (6, True), (7, True), (8, True), (9, True), (10, True), (11, True)]
+  5. Location: (batch=0, seq=2, head=0, dim=127)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True), (4, True), (7, True), (9, True), (10, True), (11, True)]
 
 Mixed mask values for top dV differences:
-  1. Location: (batch=0, seq=38, head=1, dim=6)
+  1. Location: (batch=1, seq=0, head=0, dim=104)
      Q block: 0
-     K blocks with non-zero mask: [(0, True), (1, True)]
-  2. Location: (batch=0, seq=905, head=1, dim=62)
-     Q block: 14
-     K blocks with non-zero mask: [(13, True), (14, True), (15, True)]
-  3. Location: (batch=0, seq=121, head=1, dim=89)
-     Q block: 1
-     K blocks with non-zero mask: [(0, True), (1, True), (2, True)]
-  4. Location: (batch=0, seq=444, head=0, dim=70)
-     Q block: 6
-     K blocks with non-zero mask: [(5, True), (6, True), (7, True)]
-  5. Location: (batch=0, seq=187, head=1, dim=90)
-     Q block: 2
-     K blocks with non-zero mask: [(1, True), (3, True)]
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True), (4, True), (5, True), (6, True), (7, True), (8, True), (9, True), (10, True)]
+  2. Location: (batch=1, seq=0, head=0, dim=85)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True), (4, True), (5, True), (6, True), (7, True), (8, True), (9, True), (10, True)]
+  3. Location: (batch=1, seq=0, head=0, dim=73)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True), (4, True), (5, True), (6, True), (7, True), (8, True), (9, True), (10, True)]
+  4. Location: (batch=0, seq=1, head=1, dim=100)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (4, True), (5, True), (6, True), (7, True), (8, True), (10, True), (11, True)]
+  5. Location: (batch=1, seq=0, head=0, dim=96)
+     Q block: 0
+     K blocks with non-zero mask: [(1, True), (2, True), (3, True), (4, True), (5, True), (6, True), (7, True), (8, True), (9, True), (10, True)]
 
 === BASE BLOCK MASK STRUCTURE ===
 Active blocks per head: [6099, 6099]
@@ -6237,10 +6394,10 @@ Sample of topk_idx values (first 10 per head):
 ================================================================================
 TEST SUMMARY
 ================================================================================
-Test 1: Forward=PASSED, Backward=PASSED - sparsity=0, block_window=0
-Test 2: Forward=PASSED, Backward=FAILED - sparsity=0.7, block_window=0
-Test 3: Forward=PASSED, Backward=FAILED - sparsity=0.8, block_window=0
-Test 4: Forward=PASSED, Backward=FAILED - sparsity=0.7, block_window=0
-Test 5: Forward=PASSED, Backward=FAILED - sparsity=0.8, block_window=0
+Test 1: Forward=PASSED, Backward=FAILED - sparsity=0, block_window=0
+Test 2: Forward=PASSED, Backward=FAILED - sparsity=0.7, block_window=2
+Test 3: Forward=PASSED, Backward=FAILED - sparsity=0.8, block_window=2
+Test 4: Forward=PASSED, Backward=FAILED - sparsity=0.7, block_window=8
+Test 5: Forward=PASSED, Backward=FAILED - sparsity=0.8, block_window=10
 
 Some backward pass tests FAILED! ❌
