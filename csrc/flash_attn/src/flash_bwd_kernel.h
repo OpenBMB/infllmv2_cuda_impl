@@ -707,7 +707,7 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
 
         if (!current_is_last_block) {
             // Advance gdO
-            tdOgdO.data() = tdOgdO.data() + (-int(kBlockM * params.do_row_stride));
+            tdOgdO.data() = tdOgdO.data() + (-int(next_leap * kBlockM * params.do_row_stride));
             if (Is_first) {
                 tdOgO.data() = tdOgO.data() + (-int(kBlockM * params.o_row_stride));
                 flash::copy</*Is_even_MN=*/true, Is_even_K>(gmem_tiled_copy_dO, tdOgdO, tdOrdO, tQcQ, tQpQ);
@@ -726,7 +726,7 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
             gLSE.data() = gLSE.data() + (-int(next_leap * kBlockM));
             #pragma unroll
             for (int mi = 0; mi < size(lse); ++mi) { lse(mi) = gLSE(get<0>(taccScS_row(mi))); }
-            gdPsum.data() = gdPsum.data() + (-int(kBlockM));
+            gdPsum.data() = gdPsum.data() + (-int(next_leap * kBlockM));
         }
 
         if (!Is_last) {
@@ -761,7 +761,7 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
         if (!Double_buffer && !current_is_last_block) {
             __syncthreads();
             // Advance gQ
-            tQgQ.data() = tQgQ.data() + (-int(kBlockM * params.q_row_stride));
+            tQgQ.data() = tQgQ.data() + (-int(next_leap * kBlockM * params.q_row_stride));
             flash::copy</*Is_even_MN=*/true, Is_even_K>(gmem_tiled_copy_QKV, tQgQ, tQsQ, tQcQ, tQpQ);
             flash::cp_async_fence();
         }
