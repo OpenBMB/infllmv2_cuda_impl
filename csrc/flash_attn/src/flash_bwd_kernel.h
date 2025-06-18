@@ -309,8 +309,8 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
     // Prologue
 
     // We'll advance gdQ and gdQaccum before the 1st read/write.
-    // tdQgdQ.data() = tdQgdQ.data() + kBlockM * params.dq_row_stride;
-    // tdQgdQaccum.data() = tdQgdQaccum.data() + kBlockM * params.h * params.d_rounded;
+    tdQgdQ.data() = tdQgdQ.data() + kBlockM * params.dq_row_stride;
+    tdQgdQaccum.data() = tdQgdQaccum.data() + kBlockM * params.h * params.d_rounded;
 
     int m_block = m_block_max - 1;
     int m_block_min = (!Is_causal && !Is_local)
@@ -398,36 +398,22 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
 
     Tensor tdOrdO = make_fragment_like(tdOgdO);
     Tensor tdOrO = make_fragment_like(tdOgO);
-    if (leap > 0) {
-        if (cute::thread0()) {
-            printf("[bwd leap > 0]: bidb=%d, bidh=%d, m_block=%d, n_block=%d, leap=%d, params.do_row_stride=%d\n", bidb, bidh, m_block, n_block, leap, params.do_row_stride);
-        }
-        tdOgdO.data() = tdOgdO.data() + (-int(leap * kBlockM * params.do_row_stride));
-        flash::copy<true, Is_even_K>(gmem_tiled_copy_dO, tdOgdO, tdOsdO, tQcQ, tQpQ);
+    if (!Is_first) {
+        // Clear the smem tiles to account for predicated off loads
+        flash::copy<Is_even_MN, Is_even_K, /*Clear_OOB_MN=*/true>(
+            gmem_tiled_copy_dO, tdOgdO, tdOsdO, tQcQ, tQpQ, binfo.actual_seqlen_q - m_block * kBlockM
+        );
+    } else {
+        flash::copy<Is_even_MN, Is_even_K, /*Clear_OOB_MN=*/true>(
+            gmem_tiled_copy_dO, tdOgdO, tdOrdO, tQcQ, tQpQ, binfo.actual_seqlen_q - m_block * kBlockM
+        );
+        flash::copy<Is_even_MN, Is_even_K, /*Clear_OOB_MN=*/true>(
+            gmem_tiled_copy_dO, tdOgO, tdOrO, tQcQ, tQpQ, binfo.actual_seqlen_q - m_block * kBlockM
+        );
     }
-    else {
-        if (!Is_first) {
-            // Clear the smem tiles to account for predicated off loads
-            flash::copy<Is_even_MN, Is_even_K, /*Clear_OOB_MN=*/true>(
-                gmem_tiled_copy_dO, tdOgdO, tdOsdO, tQcQ, tQpQ, binfo.actual_seqlen_q - m_block * kBlockM
-            );
-        } else {
-            flash::copy<Is_even_MN, Is_even_K, /*Clear_OOB_MN=*/true>(
-                gmem_tiled_copy_dO, tdOgdO, tdOrdO, tQcQ, tQpQ, binfo.actual_seqlen_q - m_block * kBlockM
-            );
-            flash::copy<Is_even_MN, Is_even_K, /*Clear_OOB_MN=*/true>(
-                gmem_tiled_copy_dO, tdOgO, tdOrO, tQcQ, tQpQ, binfo.actual_seqlen_q - m_block * kBlockM
-            );
-        } 
-    }
-    
-    if (leap > 0) {
-        tQgQ.data() = tQgQ.data() + (-int(leap * kBlockM * params.q_row_stride));
-        flash::copy</*Is_even_MN=*/true, Is_even_K>(gmem_tiled_copy_QKV, tQgQ, tQsQ, tQcQ, tQpQ);
-    }
-    else {
-        flash::copy<Is_even_MN, Is_even_K, /*Clear_OOB_MN=*/true>(gmem_tiled_copy_QKV, tQgQ, tQsQ, tQcQ, tQpQ, binfo.actual_seqlen_q - m_block * kBlockM);
-    }
+    flash::copy<Is_even_MN, Is_even_K, /*Clear_OOB_MN=*/true>(
+        gmem_tiled_copy_QKV, tQgQ, tQsQ, tQcQ, tQpQ, binfo.actual_seqlen_q - m_block * kBlockM
+    );
 
     Tensor caccS = make_identity_tensor(Shape<Int<kBlockM>, Int<kBlockN>>{});    // (BLK_M,BLK_N) -> (blk_m,blk_n)
     Tensor taccScS = thr_mma_sdp.partition_C(caccS);                           // (MMA,MMA_N,MMA_N)
@@ -435,19 +421,11 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
     // Convert to ((2, 2), MMA_N, MMA_N) then take only the row indices.
     Tensor taccScS_row = logical_divide(taccScS, Shape<_2>{})(make_coord(0, _), _, 0);
     Tensor lse = make_tensor<ElementAccum>(Shape<Int<decltype(size(taccScS_row))::value>>{});
-    if (leap > 0){
-        gLSE.data() = gLSE.data() + (-int(leap * kBlockM));
-        #pragma unroll
-        for (int mi = 0; mi < size(lse); ++mi) { lse(mi) = gLSE(get<0>(taccScS_row(mi))); }
+    #pragma unroll
+    for (int mi = 0; mi < size(lse); ++mi) {
+        const int row = get<0>(taccScS_row(mi));
+        lse(mi) = Is_even_MN || row < binfo.actual_seqlen_q - m_block * kBlockM ? gLSE(row) : INFINITY;
     }
-    else {
-        #pragma unroll
-        for (int mi = 0; mi < size(lse); ++mi) {
-            const int row = get<0>(taccScS_row(mi));
-            lse(mi) = Is_even_MN || row < binfo.actual_seqlen_q - m_block * kBlockM ? gLSE(row) : INFINITY;
-        }
-    }
-    
     // We want LSE = inf if the row is OOB. In that case Q would be zero, K would be zero,
     // and scores would be zero. With LSE = 0, probs will be all 1's, and when we multiply
     // with V (which would be zero), we're fine. However, with ALiBi, we might modify these
@@ -489,35 +467,10 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
     clear(acc_dv);
     clear(acc_dk);
 
-    if(leap > 0){
-        gdPsum.data() = gdPsum.data() + (-int(leap * kBlockM));
-        m_block = next_block_row_idx;
-    }
-
-    bool current_is_last_block = false;
-
     const float alibi_slope = !Has_alibi || params.alibi_slopes_ptr == nullptr ? 0.0f : reinterpret_cast<float *>(params.alibi_slopes_ptr)[bidb * params.alibi_slopes_batch_stride + bidh] / params.scale_softmax;
     flash::Alibi<Is_causal> alibi(alibi_slope, binfo.actual_seqlen_k, binfo.actual_seqlen_q);
 
-    // if (blockIdx.x == 2 && blockIdx.y == 0 && blockIdx.z == 0 && threadIdx.x == 0)
-    //     printf("current_is_last_block before = %d\n", current_is_last_block);
-    for (; !current_is_last_block && m_block >= m_block_min; m_block = next_block_row_idx) {
-        current_is_last_block = m_block <= m_block_min;
-        // if (blockIdx.x == 2 && blockIdx.y == 0 && blockIdx.z == 0 && threadIdx.x == 0)
-        //     printf("current_is_last_block after = %d\n", current_is_last_block);
-        next_leap = 0;
-        if (!current_is_last_block){
-            ++calc_block_count;
-            mask_val = blockmask.max_no_larger(m_block - 1);
-            next_block_row_idx = mask_val;
-            next_leap = m_block - next_block_row_idx;
-            // 打印跳跃步长
-            // printf("m_block=%d -> next_block_row_idx=%d (next_leap=%d)\n", 
-            //     m_block, next_block_row_idx, next_leap);
-            current_is_last_block = current_is_last_block || mask_val == -1;
-        }
-
-
+    for (; m_block >= m_block_min; --m_block) {
         Tensor acc_s = partition_fragment_C(tiled_mma_sdp, Shape<Int<kBlockM>, Int<kBlockN>>{});  // (MMA=4, MMA_N, MMA_N)
         clear(acc_s);
         cute::cp_async_wait<0>();
@@ -662,7 +615,7 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
         // if (cute::thread0()) { print(dS); }
 
         Tensor acc_dq = partition_fragment_C(tiled_mma_dq, Shape<Int<kBlockM>, Int<kHeadDim>>{});  // MMA, MMA_N, MMA_K
-        tdQgdQaccum.data() = tdQgdQaccum.data() + (-int(leap * kBlockM * params.h * params.d_rounded));
+        tdQgdQaccum.data() = tdQgdQaccum.data() + (-int(kBlockM * params.h * params.d_rounded));
         if (Is_first || Seq_parallel) {
             clear(acc_dq);
         } else {
@@ -674,13 +627,13 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
             cute::copy(gmem_tiled_copy_dQaccum, tdQgdQaccum, acc_dq_reshaped);
         }
 
-        if (Double_buffer && !current_is_last_block) {
+        if (Double_buffer && m_block > m_block_min) {
             // Double buffer for sQ
-            const int sQ_offset = (calc_block_count - 1) % 2 == 0 ? size(sQ) : -size(sQ);
+            const int sQ_offset = m_block % 2 == 0 ? size(sQ) : -size(sQ);
             tQsQ.data() = tQsQ.data() + sQ_offset;
             tSsQ.data() = tSsQ.data() + sQ_offset;
             // Advance gQ
-            tQgQ.data() = tQgQ.data() + (-int(next_leap * kBlockM * params.q_row_stride));
+            tQgQ.data() = tQgQ.data() + (-int(kBlockM * params.q_row_stride));
             flash::copy</*Is_even_MN=*/true, Is_even_K>(gmem_tiled_copy_QKV, tQgQ, tQsQ, tQcQ, tQpQ);
             flash::cp_async_fence();
         }
@@ -705,9 +658,9 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
 
         __syncthreads(); // Need syncthreads since we're writing to the same sdO location
 
-        if (!current_is_last_block) {
+        if (m_block > m_block_min) {
             // Advance gdO
-            tdOgdO.data() = tdOgdO.data() + (-int(next_leap * kBlockM * params.do_row_stride));
+            tdOgdO.data() = tdOgdO.data() + (-int(kBlockM * params.do_row_stride));
             if (Is_first) {
                 tdOgO.data() = tdOgO.data() + (-int(kBlockM * params.o_row_stride));
                 flash::copy</*Is_even_MN=*/true, Is_even_K>(gmem_tiled_copy_dO, tdOgdO, tdOrdO, tQcQ, tQpQ);
@@ -722,11 +675,11 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
                     smem_tiled_copy_dS, smem_tiled_copy_Kt, smem_thr_copy_dS, smem_thr_copy_Kt);
         // if (cute::thread0()) { print(acc_dq); }
 
-        if (!current_is_last_block) {
-            gLSE.data() = gLSE.data() + (-int(next_leap * kBlockM));
+        if (m_block > m_block_min) {
+            gLSE.data() = gLSE.data() + (-int(kBlockM));
             #pragma unroll
             for (int mi = 0; mi < size(lse); ++mi) { lse(mi) = gLSE(get<0>(taccScS_row(mi))); }
-            gdPsum.data() = gdPsum.data() + (-int(next_leap * kBlockM));
+            gdPsum.data() = gdPsum.data() + (-int(kBlockM));
         }
 
         if (!Is_last) {
@@ -758,10 +711,10 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
         if (Double_buffer) {  // Double buffer for sQ
             tdKsQt.data() = tdKsQt.data() + (m_block % 2 == 0 ? size(sQ) : -size(sQ));
         }
-        if (!Double_buffer && !current_is_last_block) {
+        if (!Double_buffer && m_block > m_block_min) {
             __syncthreads();
             // Advance gQ
-            tQgQ.data() = tQgQ.data() + (-int(next_leap * kBlockM * params.q_row_stride));
+            tQgQ.data() = tQgQ.data() + (-int(kBlockM * params.q_row_stride));
             flash::copy</*Is_even_MN=*/true, Is_even_K>(gmem_tiled_copy_QKV, tQgQ, tQsQ, tQcQ, tQpQ);
             flash::cp_async_fence();
         }
@@ -786,11 +739,7 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
                 }
             }
         }
-        
-        leap = next_leap;
-        // if (cute::thread0()) {
-        //     printf("[bwd leap update]: bidh=%d, m_block=%d, n_block=%d -> next_block_row_idx=%d (next_leap=%d)\n", bidh, m_block, n_block, next_block_row_idx, next_leap);
-        // }
+
     }
 
     // Epilogue

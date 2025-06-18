@@ -18,3 +18,6 @@ __pycache__/
 .coverage.*
 .coverage.*.*
 .coverage.*.*.*
+gradient_visualizations/
+*.log
+log/

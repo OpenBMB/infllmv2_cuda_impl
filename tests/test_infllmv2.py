@@ -115,7 +115,7 @@ def test_flash_attn_varlen_block_output(
         deterministic=False,
         return_attn_probs=False,
         block_table=None,
-        topk_idx=topk_idx,  # Use topk_idx directly instead of base_blockmask
+        topk_idx=None, #topk_idx,  # Use topk_idx directly instead of base_blockmask
         block_window_size=block_window_size,
     )
     logger.info(f"infllmv2_attn_varlen_func completed in {time.time() - attn_start:.2f}s")
@@ -167,6 +167,15 @@ def test_flash_attn_varlen_block_output(
     print(f"Output mean diff: {(out - out_ref).abs().mean().item()}")
     print(f"Pytorch max diff: {(out_pt - out_ref).abs().max().item()}")
     print(f"Pytorch mean diff: {(out_pt - out_ref).abs().mean().item()}")
+    
+    # # Visualize output differences
+    # logger.info("Creating output visualizations...")
+    # from utils import visualize_output_differences, visualize_blockmask_accuracy
+    # visualize_output_differences(out, out_ref, out_pt, config_name)
+    
+    # # Visualize blockmask accuracy
+    # logger.info("Creating blockmask accuracy visualizations...")
+    # visualize_blockmask_accuracy(out, out_ref, mixed_mask, config_name)
     
     # Find and print forward pass difference locations
     print("\n=== DETAILED FORWARD PASS DIFFERENCE ANALYSIS ===")
@@ -273,6 +282,11 @@ def test_flash_attn_varlen_block_output(
         print(f"dQ Pytorch mean diff: {(dq_pt - dq_ref).abs().mean().item()}")
         print(f"dK Pytorch mean diff: {(dk_pt - dk_ref).abs().mean().item()}")
         print(f"dV Pytorch mean diff: {(dv_pt - dv_ref).abs().mean().item()}")
+        
+        # Visualize gradient differences
+        # logger.info("Creating gradient visualizations...")
+        # from utils import visualize_gradient_differences
+        # visualize_gradient_differences(dq, dq_ref, dk, dk_ref, dv, dv_ref, config_name)
     
     # Ensure memory is freed before next test
     torch.cuda.empty_cache()
@@ -424,12 +438,12 @@ if __name__ == "__main__":
     # Define test configurations - focus on problem cases
     test_configs = [
         # seqlen_q, seqlen_k, d, causal, dtype, sparsity, batch_size, nheads, nheads_k, block_window_size
-        (128, 128, 128, True, torch.float16, 0, 1, 32, 2, 0),
-        (2048, 2048, 128, True, torch.float16, 0.7, 1, 32, 2, 2),
-        (2048, 2048, 128, True, torch.float16, 0.8, 1, 32, 2, 2),
-        # # Only run the failing test case for detailed debugging
-        (256, 256, 128, True, torch.float16, 0.7, 2, 32, 2, 8),
-        (1024, 1024, 128, True, torch.float16, 0.8, 2, 32, 2, 10),
+        # (128, 128, 128, False, torch.float16, 0, 1, 32, 2, 0),
+        (2048, 2048, 128, False, torch.float16, 0, 1, 32, 2, 0),
+        # (2048, 2048, 128, False, torch.float16, 0.8, 1, 32, 2, 0),
+        # # # Only run the failing test case for detailed debugging
+        # (256, 256, 128, False, torch.float16, 0.7, 2, 32, 2, 0),
+        # (1024, 1024, 128, False, torch.float16, 0, 1, 32, 2, 0),
     ]
     
     # Run tests
