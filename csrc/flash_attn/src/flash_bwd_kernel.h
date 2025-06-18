@@ -315,7 +315,7 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
     int m_block = m_block_max - 1;
     int m_block_min = (!Is_causal && !Is_local)
         ? 0
-        : std::max(0, (n_block * kBlockN + (binfo.actual_seqlen_q / 16) - binfo.actual_seqlen_k - params.window_size_right) / kBlockM);
+        : std::max(0, (n_block * kBlockN + (binfo.actual_seqlen_q / params.m_block_dim) - binfo.actual_seqlen_k - params.window_size_right) / kBlockM);
     // If not local, we're guaranteed that m_block_min <= m_block:
     // We checked earlier that n_block * kBlockN < actual_seqlen_k, so in the causal case,
     // n_block * kBlockN + binfo.actual_seqlen_q - binfo.actual_seqlen_k < actual_seqlen_q.
@@ -583,7 +583,7 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
                                          binfo.actual_seqlen_k, m_block * kBlockM + get<0>(taccScS_row(0)),
                                          binfo.actual_seqlen_q,
                                          // binfo.actual_seqlen_k, m_block * kBlockM + (tidx / 32) % AtomLayoutMS * 16 + (tidx % 32) / 4,
-                                         AtomLayoutMS * 16);
+                                         AtomLayoutMS * 16, params.m_block_dim);
             }
         } else if (Is_local) {
             if (m_block * kBlockM < (n_block + 1) * kBlockN + binfo.actual_seqlen_q - binfo.actual_seqlen_k - params.window_size_right
@@ -592,7 +592,7 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
                 flash::apply_mask_local(scores, n_block * kBlockN + (tidx / 32 / AtomLayoutMS) * MMA_N_SdP * 16,
                                         binfo.actual_seqlen_k, m_block * kBlockM + get<0>(taccScS_row(0)),
                                         binfo.actual_seqlen_q, AtomLayoutMS * 16,
-                                        params.window_size_left, params.window_size_right);
+                                        params.window_size_left, params.window_size_right, params.m_block_dim);
             }
 
         }

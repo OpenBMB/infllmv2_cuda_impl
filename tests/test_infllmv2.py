@@ -24,10 +24,48 @@ import gc
 import numpy as np
 import os
 from pathlib import Path
-# Setup logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+import sys
+
+# Setup logging and redirect all output to tmp.log
+log_file = 'tmp.log'
+
+# Configure logging to write to file
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, mode='w'),  # 'w' overwrites, 'a' appends
+        logging.StreamHandler(sys.stdout)  # Also output to console
+    ]
+)
 logger = logging.getLogger(__name__)
 
+# Redirect stdout and stderr to the log file
+class Tee:
+    def __init__(self, filename, mode='w'):
+        self.file = open(filename, mode)
+        self.stdout = sys.stdout
+        self.stderr = sys.stderr
+        
+    def write(self, data):
+        self.file.write(data)
+        self.file.flush()
+        self.stdout.write(data)
+        
+    def flush(self):
+        self.file.flush()
+        self.stdout.flush()
+        
+    def close(self):
+        self.file.close()
+
+# Create tee object to redirect print statements
+tee = Tee(log_file, mode='w')
+sys.stdout = tee
+sys.stderr = tee
+
+# Log start of test
+logger.info("Starting test_infllmv2.py - All output will be saved to tmp.log")
 
 MAX_HEADDIM_SM8x = 192
 block_size = 64
@@ -438,12 +476,12 @@ if __name__ == "__main__":
     # Define test configurations - focus on problem cases
     test_configs = [
         # seqlen_q, seqlen_k, d, causal, dtype, sparsity, batch_size, nheads, nheads_k, block_window_size
-        (128, 128, 128, False, torch.float16, 0, 1, 32, 2, 0),
-        (2048, 2048, 128, False, torch.float16, 0, 1, 32, 2, 0),
-        (2048, 2048, 128, False, torch.float16, 0.8, 1, 32, 2, 0),
+        (128, 128, 128, True, torch.float16, 0, 1, 32, 2, 0),
+        (2048, 2048, 128, True, torch.float16, 0, 1, 32, 2, 2),
+        (2048, 2048, 128, True, torch.float16, 0.8, 1, 32, 2, 0),
         # # Only run the failing test case for detailed debugging
-        (256, 256, 128, False, torch.float16, 0.7, 2, 32, 2, 0),
-        (1024, 1024, 128, False, torch.float16, 0, 1, 32, 2, 0),
+        (256, 256, 128, True, torch.float16, 0.7, 2, 32, 2, 0),
+        (1024, 1024, 128, True, torch.float16, 0, 1, 32, 2, 0),
     ]
     
     # Run tests
