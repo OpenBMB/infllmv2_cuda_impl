@@ -786,7 +786,11 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
                 }
             }
         }
-
+        
+        leap = next_leap;
+        // if (cute::thread0()) {
+        //     printf("[bwd leap update]: bidh=%d, m_block=%d, n_block=%d -> next_block_row_idx=%d (next_leap=%d)\n", bidh, m_block, n_block, next_block_row_idx, next_leap);
+        // }
     }
 
     // Epilogue
