@@ -676,11 +676,11 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
 
         if (Double_buffer && !current_is_last_block) {
             // Double buffer for sQ
-            const int sQ_offset = m_block % 2 == 0 ? size(sQ) : -size(sQ);
+            const int sQ_offset = (calc_block_count - 1) % 2 == 0 ? size(sQ) : -size(sQ);
             tQsQ.data() = tQsQ.data() + sQ_offset;
             tSsQ.data() = tSsQ.data() + sQ_offset;
             // Advance gQ
-            tQgQ.data() = tQgQ.data() + (-int(kBlockM * params.q_row_stride));
+            tQgQ.data() = tQgQ.data() + (-int(next_leap * kBlockM * params.q_row_stride));
             flash::copy</*Is_even_MN=*/true, Is_even_K>(gmem_tiled_copy_QKV, tQgQ, tQsQ, tQcQ, tQpQ);
             flash::cp_async_fence();
         }
