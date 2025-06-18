@@ -309,8 +309,8 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
     // Prologue
 
     // We'll advance gdQ and gdQaccum before the 1st read/write.
-    tdQgdQ.data() = tdQgdQ.data() + kBlockM * params.dq_row_stride;
-    tdQgdQaccum.data() = tdQgdQaccum.data() + kBlockM * params.h * params.d_rounded;
+    // tdQgdQ.data() = tdQgdQ.data() + kBlockM * params.dq_row_stride;
+    // tdQgdQaccum.data() = tdQgdQaccum.data() + kBlockM * params.h * params.d_rounded;
 
     int m_block = m_block_max - 1;
     int m_block_min = (!Is_causal && !Is_local)
@@ -662,7 +662,7 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
         // if (cute::thread0()) { print(dS); }
 
         Tensor acc_dq = partition_fragment_C(tiled_mma_dq, Shape<Int<kBlockM>, Int<kHeadDim>>{});  // MMA, MMA_N, MMA_K
-        tdQgdQaccum.data() = tdQgdQaccum.data() + (-int(kBlockM * params.h * params.d_rounded));
+        tdQgdQaccum.data() = tdQgdQaccum.data() + (-int(leap * kBlockM * params.h * params.d_rounded));
         if (Is_first || Seq_parallel) {
             clear(acc_dq);
         } else {
