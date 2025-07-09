@@ -166,8 +166,8 @@ def transform_score(
 
 def test_pooling_functions():
     # Load the saved score tensor
-    print("Loading score tensor from /user/qiqi/tmp/stage1_score.pt")
-    score = torch.load("/user/qiqi/tmp/stage1_score.pt")
+    print("Loading score tensor from  /cache/suzhou/downloads/stage1_score.pt")
+    score = torch.load("/cache/suzhou/downloads/stage1_score.pt")
     print(f"Score tensor shape: {score.shape}")
     
     # Test parameters (use the same parameters for both functions)
@@ -268,12 +268,11 @@ def test_pooling_functions():
                 
                 flat_indices = torch.nonzero(mismatch_positions.flatten()).flatten()
                 indices = np.array(np.unravel_index(flat_indices.cpu().numpy(), mismatch_positions.shape)).T
-                breakpoint()
                 for i, idx in enumerate(indices):
                     h, q, b = idx
                     orig_val = original_result[h, q, b].item()
                     new_val = new_result[h, q, b].item()
-                    print(f"  {i+1}. Position {idx}: Original={orig_val}, New={new_val}")
+                    # print(f"  {i+1}. Position {idx}: Original={orig_val}, New={new_val}")
         
         # Compare for inf values as well
         print("\nComparing inf positions:")
