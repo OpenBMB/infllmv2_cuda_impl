@@ -40,6 +40,17 @@ __global__ void max_pooling_1d_kernel(
         bool should_mask_inf = (off_bk < init_blocks);
         bool should_mask_neg_inf = (off_bq >= off_bk) && (off_bq < off_bk + local_blocks);
         
+        // Debug output for specific position
+        if (bidh == 0 && bidq == 234 && k == 6) {
+            printf("Debug h=0, q=234, k=6:\n");
+            printf("  off_bq = %d\n", off_bq);
+            printf("  off_bk = %d\n", off_bk); 
+            printf("  init_blocks = %d\n", init_blocks);
+            printf("  local_blocks = %d\n", local_blocks);
+            printf("  should_mask_inf = %d\n", should_mask_inf);
+            printf("  should_mask_neg_inf = %d\n", should_mask_neg_inf);
+        }
+        
         if (should_mask_inf) {
             out[k] = TypeTraits<T>::inf();
         }
@@ -53,6 +64,16 @@ __global__ void max_pooling_1d_kernel(
             start = max(start, 0);
             end = min(end, k_len);
             
+            // Debug output for specific position
+            if (bidh == 0 && bidq == 234 && k == 6) {
+                printf("  Computing max pooling:\n");
+                printf("  start = %d * %d - %d = %d (after max: %d)\n", 
+                       k, stride, padding, k * stride - padding, start);
+                printf("  end = %d + %d = %d (after min: %d)\n", 
+                       start, kernel_size, start + kernel_size, end);
+                printf("  k_len = %d\n", k_len);
+            }
+            
             T max_val = -TypeTraits<T>::inf();
             if (end > start) {
                 max_val = in[start];
@@ -60,6 +81,15 @@ __global__ void max_pooling_1d_kernel(
                     if (in[i] > max_val) {
                         max_val = in[i];
                     }
+                }
+                
+                // Debug output for specific position
+                if (bidh == 0 && bidq == 234 && k == 6) {
+                    printf("  Pooling range [%d, %d):\n", start, end);
+                    for (int i = start; i < end; i++) {
+                        printf("    in[%d] = %f\n", i, (float)in[i]);
+                    }
+                    printf("  max_val = %f\n", (float)max_val);
                 }
             }
             out[k] = max_val;
