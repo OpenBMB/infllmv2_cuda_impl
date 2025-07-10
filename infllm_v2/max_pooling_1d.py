@@ -10,6 +10,7 @@ def max_pooling_1d(
     stride: int = 16,
 ) -> torch.Tensor:
     assert input.dtype == torch.float16 or input.dtype == torch.bfloat16
+    input = input.contiguous()
     stride = block_size // stride
     kernel_size = stride + 1
     padding = 1

@@ -36,26 +36,41 @@ __global__ void max_pooling_1d_kernel(
         // This is equivalent to `off_bk` in transform_score
         int off_bk = k;
         
+        // Debug print for specific position
+        if (bidh == 0 && bidq == 234 && k == 6 && threadIdx.x == 6) {
+            printf("[DEBUG] h=%d, q=%d, b=%d:\n", bidh, bidq, k);
+            printf("  cache_len=%d, block_size=%d\n", cache_len, block_size);
+            printf("  off_bq = (%d + %d) / %d = %d\n", bidq, cache_len, block_size, off_bq);
+            printf("  off_bk = %d\n", off_bk);
+            printf("  init_blocks=%d, local_blocks=%d\n", init_blocks, local_blocks);
+        }
+        
         // Check causal + local window mask based on exact criteria from transform_score
         bool should_mask_inf = (off_bk < init_blocks);
         bool should_mask_neg_inf = (off_bq >= off_bk) && (off_bq < off_bk + local_blocks);
         
-        // Debug output for specific position
-        if (bidh == 0 && bidq == 234 && k == 6) {
-            printf("Debug h=0, q=234, k=6:\n");
-            printf("  off_bq = %d\n", off_bq);
-            printf("  off_bk = %d\n", off_bk); 
-            printf("  init_blocks = %d\n", init_blocks);
-            printf("  local_blocks = %d\n", local_blocks);
-            printf("  should_mask_inf = %d\n", should_mask_inf);
-            printf("  should_mask_neg_inf = %d\n", should_mask_neg_inf);
+        if (bidh == 0 && bidq == 234 && k == 6 && threadIdx.x == 6) {
+            printf("  Masking conditions:\n");
+            printf("    should_mask_inf = (off_bk=%d < init_blocks=%d) = %s\n", 
+                   off_bk, init_blocks, should_mask_inf ? "true" : "false");
+            printf("    should_mask_neg_inf = (off_bq=%d >= off_bk=%d) && (off_bq=%d < off_bk=%d + local_blocks=%d)\n",
+                   off_bq, off_bk, off_bq, off_bk, local_blocks);
+            printf("                        = (%s) && (%d < %d) = %s\n",
+                   (off_bq >= off_bk) ? "true" : "false", off_bq, off_bk + local_blocks,
+                   should_mask_neg_inf ? "true" : "false");
         }
         
         if (should_mask_inf) {
             out[k] = TypeTraits<T>::inf();
+            if (bidh == 0 && bidq == 234 && k == 6 && threadIdx.x == 6) {
+                printf("  Result: Masked with inf\n");
+            }
         }
         else if (should_mask_neg_inf) {
             out[k] = -TypeTraits<T>::inf();
+            if (bidh == 0 && bidq == 234 && k == 6 && threadIdx.x == 6) {
+                printf("  Result: Masked with -inf\n");
+            }
         }
         else {
             // Compute max pooling for other areas
@@ -64,35 +79,37 @@ __global__ void max_pooling_1d_kernel(
             start = max(start, 0);
             end = min(end, k_len);
             
-            // Debug output for specific position
-            if (bidh == 0 && bidq == 234 && k == 6) {
-                printf("  Computing max pooling:\n");
-                printf("  start = %d * %d - %d = %d (after max: %d)\n", 
-                       k, stride, padding, k * stride - padding, start);
-                printf("  end = %d + %d = %d (after min: %d)\n", 
-                       start, kernel_size, start + kernel_size, end);
-                printf("  k_len = %d\n", k_len);
+            if (bidh == 0 && bidq == 234 && k == 6 && threadIdx.x == 6) {
+                printf("  Max pooling computation:\n");
+                printf("    start = %d * %d - %d = %d\n", k, stride, padding, k * stride - padding);
+                printf("    end = %d + %d = %d\n", start, kernel_size, start + kernel_size);
+                printf("    start (clamped) = max(%d, 0) = %d\n", k * stride - padding, start);
+                printf("    end (clamped) = min(%d, %d) = %d\n", start + kernel_size, k_len, end);
             }
             
             T max_val = -TypeTraits<T>::inf();
             if (end > start) {
                 max_val = in[start];
+                if (bidh == 0 && bidq == 234 && k == 6 && threadIdx.x == 6) {
+                    printf("    Pooling range [%d, %d):\n", start, end);
+                    printf("    in[%d] = %f\n", start, float(in[start]));
+                }
                 for (int i = start + 1; i < end; i++) {
+                    if (bidh == 0 && bidq == 234 && k == 6 && threadIdx.x == 6) {
+                        printf("    in[%d] = %f\n", i, float(in[i]));
+                    }
                     if (in[i] > max_val) {
                         max_val = in[i];
                     }
                 }
-                
-                // Debug output for specific position
-                if (bidh == 0 && bidq == 234 && k == 6) {
-                    printf("  Pooling range [%d, %d):\n", start, end);
-                    for (int i = start; i < end; i++) {
-                        printf("    in[%d] = %f\n", i, (float)in[i]);
-                    }
-                    printf("  max_val = %f\n", (float)max_val);
+                if (bidh == 0 && bidq == 234 && k == 6 && threadIdx.x == 6) {
+                    printf("    max_val = %f\n", float(max_val));
                 }
             }
             out[k] = max_val;
+            if (bidh == 0 && bidq == 234 && k == 6 && threadIdx.x == 6) {
+                printf("  Result: %f\n", float(out[k]));
+            }
         }
     }
 }

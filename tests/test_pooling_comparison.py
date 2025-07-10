@@ -237,7 +237,7 @@ def test_pooling_functions():
     print("\nRunning max_pooling_1d...")
     # Run the new max_pooling_1d function
     new_result = max_pooling_1d(
-        attn_score,
+        attn_score.contiguous(),
         cache_len=0,
         local_blocks=local_blocks,
         init_blocks=init_blocks,
@@ -387,9 +387,8 @@ def test_pooling_functions():
                 new = new_result[h, q, b].item()
                 diff = new - orig
                 print(f"  {i+1}. [h={h}, q={q}, b={b}]: orig={orig:.4f}, new={new:.4f}, diff={diff:.4f}, |diff|={abs(diff):.4f}")
-            breakpoint()
             # Visualize non-infinite values
-            visualize_non_infinite_values(original_result, new_result, non_inf_mask)
+            # visualize_non_infinite_values(original_result, new_result, non_inf_mask)
         else:
             print("No positions with non-infinite values in both results")
         
