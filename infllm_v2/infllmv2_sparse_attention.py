@@ -546,7 +546,6 @@ def infllmv2_attn_stage1(
     )
     
     S_dmask = result[0] if isinstance(result, list) else result
-    S_dmask = S_dmask[:,:, :max_seqlen_k]
     S_dmask = torch.where(torch.isnan(S_dmask), 0, S_dmask)
     # if return_attn_probs and S_dmask is not None:
     #     # The kernel now returns shape (num_heads_k, total_q, max_seqlen_k)
