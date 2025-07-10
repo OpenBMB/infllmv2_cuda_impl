@@ -165,10 +165,46 @@ def transform_score(
 
 
 def test_pooling_functions():
-    # Load the saved score tensor
-    print("Loading score tensor from  /cache/suzhou/downloads/stage1_score.pt")
-    score = torch.load("/cache/suzhou/downloads/stage1_score.pt")
-    print(f"Score tensor shape: {score.shape}")
+    """Test with only the first batch from multi-batch data"""
+    # Load data from multibatch directory
+    data_dir = "/cache/suzhou/downloads/multibatch"
+    
+    print(f"Loading data from {data_dir}")
+    attn_score_full = torch.load(f"{data_dir}/attn_score.pt").to(torch.bfloat16)
+    cu_seqlens_q_full = torch.load(f"{data_dir}/cu_seqlens_q.pt")
+    cu_seqlens_k_full = torch.load(f"{data_dir}/cu_seqlens_k.pt")
+    max_seqlen_q = torch.load(f"{data_dir}/max_seqlen_q.pt")
+    max_seqlen_k = torch.load(f"{data_dir}/max_seqlen_k.pt")
+    
+    print(f"Full score tensor shape: {attn_score_full.shape}")
+    print(f"Full cu_seqlens_q: {cu_seqlens_q_full}")
+    print(f"Full cu_seqlens_k: {cu_seqlens_k_full}")
+    
+    # Extract only the first batch
+    batch_idx = 0
+    q_start = int(cu_seqlens_q_full[batch_idx].item())
+    q_end = int(cu_seqlens_q_full[batch_idx + 1].item())
+    k_start = int(cu_seqlens_k_full[batch_idx].item())
+    k_end = int(cu_seqlens_k_full[batch_idx + 1].item())
+    
+    # Slice the attention score for the first batch
+    attn_score = attn_score_full[:, q_start:q_end, k_start:k_end]
+    
+    # Create new cu_seqlens for single batch
+    cu_seqlens_q = torch.tensor([0, q_end - q_start], device=attn_score.device, dtype=torch.int32)
+    cu_seqlens_k = torch.tensor([0, k_end - k_start], device=attn_score.device, dtype=torch.int32)
+    
+    # Update max_seqlen for single batch
+    single_batch_max_seqlen_q = q_end - q_start
+    single_batch_max_seqlen_k = k_end - k_start
+    
+    print(f"\nSingle batch configuration:")
+    print(f"Batch index: {batch_idx}")
+    print(f"Query range: {q_start}-{q_end} (length: {q_end - q_start})")
+    print(f"Key range: {k_start}-{k_end} (length: {k_end - k_start})")
+    print(f"Single batch score tensor shape: {attn_score.shape}")
+    print(f"Single batch cu_seqlens_q: {cu_seqlens_q}")
+    print(f"Single batch cu_seqlens_k: {cu_seqlens_k}")
     
     # Test parameters (use the same parameters for both functions)
     kernel_size = 32
@@ -177,27 +213,19 @@ def test_pooling_functions():
     init_blocks = 1
     local_blocks = 32
     
-    # Create dummy cu_seqlens for testing
-    batch_size = 1
-    total_query_len = score.shape[1]
-    total_key_len = score.shape[2]
-    
-    cu_seqlens_q = torch.tensor([0, total_query_len], device=score.device, dtype=torch.int32)
-    cu_seqlens_k = torch.tensor([0, total_key_len], device=score.device, dtype=torch.int32)
-    max_seqlen_q = total_query_len
-    max_seqlen_k = total_key_len
-    total_seq_lens = total_key_len
+    print("\nRunning transform_score on single batch...") 
     print("\nRunning transform_score...")
+
     # Run the original transform_score function
     original_result = transform_score(
-        score,
+        attn_score,
         kernel_size,
         kernel_stride,
         block_size,
         cu_seqlens_q,
         cu_seqlens_k,
-        max_seqlen_q,
-        max_seqlen_k,
+        single_batch_max_seqlen_q,
+        single_batch_max_seqlen_k,
         init_blocks=init_blocks,
         local_blocks=local_blocks,
         
@@ -206,20 +234,17 @@ def test_pooling_functions():
     print("\nRunning max_pooling_1d...")
     # Run the new max_pooling_1d function
     new_result = max_pooling_1d(
-        score,
+        attn_score,
         cache_len=0,
         local_blocks=local_blocks,
         init_blocks=init_blocks,
         block_size=block_size,
-        stride=kernel_stride,
-        cu_seqlens_q=cu_seqlens_q,
-        cu_seqlens_k=cu_seqlens_k,
-        max_seqlen_q=max_seqlen_q,
-        max_seqlen_k=max_seqlen_k,
+        stride=kernel_stride
     )
     
     # Compare shapes
     print(f"\nComparing shapes:")
+    print(f"attn_score shape: {attn_score.shape}")
     print(f"Original result shape: {original_result.shape}")
     print(f"New result shape: {new_result.shape}")
     
@@ -331,304 +356,5 @@ def test_pooling_functions():
     else:
         print("Cannot compare values because shapes are different")
 
-
-def test_pooling_functions_multibatch():
-    # Load data from multibatch directory
-    data_dir = "/cache/suzhou/downloads/multibatch"
-    
-    print(f"Loading data from {data_dir}")
-    attn_score = torch.load(f"{data_dir}/attn_score.pt").to(torch.bfloat16)
-    cu_seqlens_q = torch.load(f"{data_dir}/cu_seqlens_q.pt")
-    cu_seqlens_k = torch.load(f"{data_dir}/cu_seqlens_k.pt")
-    max_seqlen_q = torch.load(f"{data_dir}/max_seqlen_q.pt")
-    max_seqlen_k = torch.load(f"{data_dir}/max_seqlen_k.pt")
-    
-    print(f"Score tensor shape: {attn_score.shape}")
-    print(f"cu_seqlens_q: {cu_seqlens_q}")
-    print(f"cu_seqlens_k: {cu_seqlens_k}")
-    print(f"max_seqlen_q: {max_seqlen_q}")
-    print(f"max_seqlen_k: {max_seqlen_k}")
-    
-    # Test parameters (use the same parameters for both functions)
-    kernel_size = 32
-    kernel_stride = 16
-    block_size = 64
-    init_blocks = 1
-    local_blocks = 32
-    
-    # Extract dimensions
-    num_heads = attn_score.shape[0]
-    total_query_len = attn_score.shape[1]
-    total_key_len = attn_score.shape[2]
-    batch_size = cu_seqlens_q.shape[0] - 1
-    
-    print(f"\nTest configuration:")
-    print(f"batch_size: {batch_size}")
-    print(f"num_heads: {num_heads}")
-    print(f"total_query_len: {total_query_len}")
-    print(f"total_key_len: {total_key_len}")
-    
-    print("\nRunning transform_score...")
-    # Run the original transform_score function
-    original_result = transform_score(
-        attn_score,
-        kernel_size,
-        kernel_stride,
-        block_size,
-        cu_seqlens_q,
-        cu_seqlens_k,
-        max_seqlen_q,
-        max_seqlen_k,
-        init_blocks=init_blocks,
-        local_blocks=local_blocks,
-    )
-    
-    print("\nRunning max_pooling_1d...")
-    # Run the new max_pooling_1d function
-    new_result = max_pooling_1d(
-        attn_score,
-        cache_len=0,
-        local_blocks=local_blocks,
-        init_blocks=init_blocks,
-        block_size=block_size,
-        stride=kernel_stride,
-        cu_seqlens_q=cu_seqlens_q,
-        cu_seqlens_k=cu_seqlens_k,
-        max_seqlen_q=max_seqlen_q,
-        max_seqlen_k=max_seqlen_k,
-    )
-    
-    # Compare shapes
-    print(f"\nComparing shapes:")
-    print(f"Original result shape: {original_result.shape}")
-    print(f"New result shape: {new_result.shape}")
-    
-    # Compare values
-    print("\nComparing values:")
-    if original_result.shape == new_result.shape:
-        # Check if values are close
-        abs_diff = torch.abs(original_result - new_result)
-        
-        # Replace NaN values (resulting from inf - inf) with 0 for computing statistics
-        abs_diff_no_nan = torch.where(torch.isnan(abs_diff), torch.zeros_like(abs_diff), abs_diff)
-        max_diff = torch.max(abs_diff_no_nan).item()
-        mean_diff = torch.mean(abs_diff_no_nan).item()
-        
-        print(f"Maximum absolute difference (excluding NaNs): {max_diff}")
-        print(f"Mean absolute difference (excluding NaNs): {mean_diff}")
-        
-        # Count number of significant differences (threshold: 1e-5)
-        threshold = 1e-5
-        num_different = torch.sum(abs_diff_no_nan > threshold).item()
-        percentage_different = 100 * num_different / torch.numel(original_result)
-        print(f"Number of elements with difference > {threshold}: {num_different} ({percentage_different:.4f}%)")
-        
-        # Analyze per batch
-        print("\nPer-batch analysis:")
-        for b in range(batch_size):
-            q_start = int(cu_seqlens_q[b].item())
-            q_end = int(cu_seqlens_q[b+1].item())
-            
-            batch_orig = original_result[:, q_start:q_end, :]
-            batch_new = new_result[:, q_start:q_end, :]
-            
-            batch_diff = torch.abs(batch_orig - batch_new)
-            batch_diff_no_nan = torch.where(torch.isnan(batch_diff), torch.zeros_like(batch_diff), batch_diff)
-            
-            print(f"\nBatch {b} (queries {q_start}-{q_end}):")
-            print(f"  Max difference: {torch.max(batch_diff_no_nan).item()}")
-            print(f"  Mean difference: {torch.mean(batch_diff_no_nan).item()}")
-            
-            # Check inf positions
-            orig_inf = torch.isinf(batch_orig)
-            new_inf = torch.isinf(batch_new)
-            inf_match = torch.all(orig_inf == new_inf)
-            print(f"  Inf positions match: {inf_match}")
-            
-            if not inf_match:
-                mismatch_count = torch.sum(orig_inf != new_inf).item()
-                print(f"  Number of inf mismatches: {mismatch_count}")
-        
-        # Save results
-        torch.save(original_result, f"{data_dir}/transform_score_output.pt")
-        torch.save(new_result, f"{data_dir}/max_pooling_1d_output.pt")
-        print(f"\nResults saved to {data_dir}")
-        
-    else:
-        print("Cannot compare values because shapes are different")
-
-
-def test_pooling_functions_single_batch_from_multibatch():
-    """Test with only the first batch from multi-batch data"""
-    # Load data from multibatch directory
-    data_dir = "/cache/suzhou/downloads/multibatch"
-    
-    print(f"Loading data from {data_dir}")
-    attn_score_full = torch.load(f"{data_dir}/attn_score.pt").to(torch.bfloat16)
-    cu_seqlens_q_full = torch.load(f"{data_dir}/cu_seqlens_q.pt")
-    cu_seqlens_k_full = torch.load(f"{data_dir}/cu_seqlens_k.pt")
-    max_seqlen_q = torch.load(f"{data_dir}/max_seqlen_q.pt")
-    max_seqlen_k = torch.load(f"{data_dir}/max_seqlen_k.pt")
-    
-    print(f"Full score tensor shape: {attn_score_full.shape}")
-    print(f"Full cu_seqlens_q: {cu_seqlens_q_full}")
-    print(f"Full cu_seqlens_k: {cu_seqlens_k_full}")
-    
-    # Extract only the first batch
-    batch_idx = 0
-    q_start = int(cu_seqlens_q_full[batch_idx].item())
-    q_end = int(cu_seqlens_q_full[batch_idx + 1].item())
-    k_start = int(cu_seqlens_k_full[batch_idx].item())
-    k_end = int(cu_seqlens_k_full[batch_idx + 1].item())
-    
-    # Slice the attention score for the first batch
-    attn_score = attn_score_full[:, q_start:q_end, k_start:k_end]
-    
-    # Create new cu_seqlens for single batch
-    cu_seqlens_q = torch.tensor([0, q_end - q_start], device=attn_score.device, dtype=torch.int32)
-    cu_seqlens_k = torch.tensor([0, k_end - k_start], device=attn_score.device, dtype=torch.int32)
-    
-    # Update max_seqlen for single batch
-    single_batch_max_seqlen_q = q_end - q_start
-    single_batch_max_seqlen_k = k_end - k_start
-    
-    print(f"\nSingle batch configuration:")
-    print(f"Batch index: {batch_idx}")
-    print(f"Query range: {q_start}-{q_end} (length: {q_end - q_start})")
-    print(f"Key range: {k_start}-{k_end} (length: {k_end - k_start})")
-    print(f"Single batch score tensor shape: {attn_score.shape}")
-    print(f"Single batch cu_seqlens_q: {cu_seqlens_q}")
-    print(f"Single batch cu_seqlens_k: {cu_seqlens_k}")
-    
-    # Test parameters (use the same parameters for both functions)
-    kernel_size = 32
-    kernel_stride = 16
-    block_size = 64
-    init_blocks = 1
-    local_blocks = 32
-    
-    print("\nRunning transform_score on single batch...")
-    # Run the original transform_score function
-    original_result = transform_score(
-        attn_score,
-        kernel_size,
-        kernel_stride,
-        block_size,
-        cu_seqlens_q,
-        cu_seqlens_k,
-        single_batch_max_seqlen_q,
-        single_batch_max_seqlen_k,
-        init_blocks=init_blocks,
-        local_blocks=local_blocks,
-    )
-    
-    print("\nRunning max_pooling_1d on single batch...")
-    # Run the new max_pooling_1d function
-    new_result = max_pooling_1d(
-        attn_score,
-        cache_len=0,
-        local_blocks=local_blocks,
-        init_blocks=init_blocks,
-        block_size=block_size,
-        stride=kernel_stride,
-        cu_seqlens_q=cu_seqlens_q,
-        cu_seqlens_k=cu_seqlens_k,
-        max_seqlen_q=single_batch_max_seqlen_q,
-        max_seqlen_k=single_batch_max_seqlen_k,
-    )
-    
-    # Compare shapes
-    print(f"\nComparing shapes:")
-    print(f"Original result shape: {original_result.shape}")
-    print(f"New result shape: {new_result.shape}")
-    
-    # Compare values
-    print("\nComparing values:")
-    if original_result.shape == new_result.shape:
-        # Check if values are close
-        abs_diff = torch.abs(original_result - new_result)
-        
-        # Replace NaN values (resulting from inf - inf) with 0 for computing statistics
-        abs_diff_no_nan = torch.where(torch.isnan(abs_diff), torch.zeros_like(abs_diff), abs_diff)
-        max_diff = torch.max(abs_diff_no_nan).item()
-        mean_diff = torch.mean(abs_diff_no_nan).item()
-        
-        print(f"Maximum absolute difference (excluding NaNs): {max_diff}")
-        print(f"Mean absolute difference (excluding NaNs): {mean_diff}")
-        
-        # Count number of significant differences (threshold: 1e-5)
-        threshold = 1e-5
-        num_different = torch.sum(abs_diff_no_nan > threshold).item()
-        percentage_different = 100 * num_different / torch.numel(original_result)
-        print(f"Number of elements with difference > {threshold}: {num_different} ({percentage_different:.4f}%)")
-        
-        # Specifically compare the -inf positions
-        print("\nComparing -inf positions:")
-        orig_neg_inf = torch.isinf(original_result) & (original_result < 0)
-        new_neg_inf = torch.isinf(new_result) & (new_result < 0)
-        
-        # Check if -inf positions match
-        neg_inf_match = orig_neg_inf == new_neg_inf
-        total_neg_inf_positions = torch.sum(orig_neg_inf | new_neg_inf).item()
-        matching_neg_inf_positions = torch.sum(neg_inf_match & (orig_neg_inf | new_neg_inf)).item()
-        
-        print(f"Total -inf positions in either result: {total_neg_inf_positions}")
-        print(f"Number of -inf positions in original result: {torch.sum(orig_neg_inf).item()}")
-        print(f"Number of -inf positions in new result: {torch.sum(new_neg_inf).item()}")
-        print(f"Number of matching -inf positions: {matching_neg_inf_positions}")
-        
-        if torch.all(neg_inf_match):
-            print("All -inf positions match exactly!")
-        else:
-            print("Found mismatched -inf positions")
-        
-        # Compare for inf values as well
-        print("\nComparing inf positions:")
-        orig_inf = torch.isinf(original_result) & (original_result > 0)
-        new_inf = torch.isinf(new_result) & (new_result > 0)
-        
-        # Check if inf positions match
-        inf_match = orig_inf == new_inf
-        total_inf_positions = torch.sum(orig_inf | new_inf).item()
-        matching_inf_positions = torch.sum(inf_match & (orig_inf | new_inf)).item()
-        
-        print(f"Total inf positions in either result: {total_inf_positions}")
-        print(f"Number of inf positions in original result: {torch.sum(orig_inf).item()}")
-        print(f"Number of inf positions in new result: {torch.sum(new_inf).item()}")
-        print(f"Number of matching inf positions: {matching_inf_positions}")
-        
-        if torch.all(inf_match):
-            print("All inf positions match exactly!")
-        else:
-            print("Found mismatched inf positions")
-        
-        # Compare non-inf values
-        print("\nComparing non-infinite values:")
-        non_inf_mask = ~torch.isinf(original_result) & ~torch.isinf(new_result)
-        non_inf_count = torch.sum(non_inf_mask).item()
-        
-        if non_inf_count > 0:
-            non_inf_diff = torch.abs(original_result[non_inf_mask] - new_result[non_inf_mask])
-            non_inf_max_diff = torch.max(non_inf_diff).item()
-            non_inf_mean_diff = torch.mean(non_inf_diff).item()
-            print(f"Number of positions with non-infinite values in both results: {non_inf_count}")
-            print(f"Maximum difference among non-infinite values: {non_inf_max_diff}")
-            print(f"Mean difference among non-infinite values: {non_inf_mean_diff}")
-        else:
-            print("No positions with non-infinite values in both results")
-        
-        # Save results for single batch
-        torch.save(original_result, f"{data_dir}/transform_score_output_single_batch.pt")
-        torch.save(new_result, f"{data_dir}/max_pooling_1d_output_single_batch.pt")
-        print(f"\nSingle batch results saved to {data_dir}")
-        
-    else:
-        print("Cannot compare values because shapes are different")
-
-
 if __name__ == "__main__":
-    import sys
-    
-    # Test with only the first batch from multi-batch data
-    print("Testing with single batch (first batch from multi-batch data)")
-    test_pooling_functions_single_batch_from_multibatch() 
+    test_pooling_functions() 

@@ -12,15 +12,10 @@ template <typename T>
 __global__ void max_pooling_1d_kernel(
     const T* input,
     T* output,
-    const int* cu_seqlens_q,
-    const int* cu_seqlens_k,
     int num_heads,
-    int batch_size,
-    int total_q_len,
+    int q_len,
     int k_len,
-    int max_blocks,
-    int max_seqlen_q,
-    int max_seqlen_k,
+    int out_len,
     int cache_len,
     int kernel_size,
     int stride,
@@ -31,9 +26,6 @@ __global__ void max_pooling_1d_kernel(
 ) {
     int bidh = blockIdx.y;
     int bidq = blockIdx.x;
-    int q_len = max_seqlen_q;
-    int out_len = max_blocks;
-
     const T* in = input + bidh * (q_len * k_len) + bidq * k_len;
     T* out = output + bidh * (q_len * out_len) + bidq * out_len;
     
@@ -81,15 +73,10 @@ void max_pooling_1d_func(
     cudaStream_t stream,
     const T* input,
     T* output,
-    const int* cu_seqlens_q,
-    const int* cu_seqlens_k,
     int num_heads,
-    int batch_size,
-    int total_q_len,
+    int q_len,
     int k_len,
-    int max_blocks,
-    int max_seqlen_q,
-    int max_seqlen_k,
+    int out_len,
     int cache_len,
     int kernel_size,
     int stride,
@@ -100,13 +87,10 @@ void max_pooling_1d_func(
 ) {
     const int threads_per_block = 256;
     
-    dim3 grid(max_seqlen_q, num_heads);
+    dim3 grid(q_len, num_heads);
     dim3 block(threads_per_block, 1);
     
     max_pooling_1d_kernel<<<grid, block, 0, stream>>>(
-        input, output, cu_seqlens_q, cu_seqlens_k,
-        num_heads, batch_size, total_q_len, k_len, max_blocks,
-        max_seqlen_q, max_seqlen_k, cache_len, kernel_size, stride, 
-        padding, block_size, local_blocks, init_blocks
+        input, output, num_heads, q_len, k_len, out_len, cache_len, kernel_size, stride, padding, block_size, local_blocks, init_blocks
     );
 } 
