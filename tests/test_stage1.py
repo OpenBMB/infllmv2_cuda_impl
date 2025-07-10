@@ -136,24 +136,11 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
                 # if end_idx > start_idx:  # 只有当序列长度大于31时才检查
                 #     assert (flash_score[ :, start_idx: start_idx + 32] == float('-inf')).all(), f"Sequence {i} causal mask check failed"
         print(f"{seqlen_q=} {seqlen_k=} {causal=}")
-
-        # Pad naive_score's last dimension to multiple of 128
-        last_dim_size = naive_score.shape[-1]
-        padded_size = round_multiple(last_dim_size, 128)
-        if padded_size > last_dim_size:
-            pad_width = padded_size - last_dim_size
-            naive_score_padded = F.pad(naive_score, (0, pad_width), value=0)
-        else:
-            naive_score_padded = naive_score
-
-        try:
-            print("score max diff :", (naive_score_padded - flash_score).abs().max())
-            if (naive_score_padded - flash_score).abs().max() > 1e-2:
-                print(f"error: seqlen_qs={seqlen_qs}, seqlen_ks={seqlen_ks}")
-        except Exception as e:
+        print("score max diff :", (naive_score - flash_score).abs().max())
+        
+        if (naive_score - flash_score).abs().max() > 1e-2:
             print(f"error: seqlen_qs={seqlen_qs}, seqlen_ks={seqlen_ks}")
-            print(e)
-            breakpoint()
+
 if __name__ == "__main__":
     # Test 5 cases for causal=False
     test_seqlens = [100, 500, 1000, 5000, 9000]
