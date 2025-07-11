@@ -99,7 +99,7 @@ if not SKIP_CUDA_BUILD:
     
     # 支持多种常见的GPU架构
     # 70: V100, 75: T4/RTX, 80: A100, 86: RTX 3090/RTX A6000, 89: RTX 4090, 90: H100
-    supported_archs = ["80"]
+    supported_archs = ["86"]
     for arch in supported_archs:
         cc_flag.extend(["-gencode", f"arch=compute_{arch},code=sm_{arch}"])
     
@@ -121,8 +121,8 @@ if not SKIP_CUDA_BUILD:
                 # "csrc/flash_attn/src/flash_fwd_hdim64_bf16_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_hdim96_fp16_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_hdim96_bf16_sm80.cu",
-                "csrc/flash_attn/src/flash_fwd_hdim128_fp16_sm80.cu",
-                # "csrc/flash_attn/src/flash_fwd_hdim128_bf16_sm80.cu",
+                # "csrc/flash_attn/src/flash_fwd_hdim128_fp16_sm80.cu",
+                "csrc/flash_attn/src/flash_fwd_hdim128_bf16_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_hdim160_fp16_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_hdim160_bf16_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_hdim192_fp16_sm80.cu",
@@ -135,8 +135,8 @@ if not SKIP_CUDA_BUILD:
                 # "csrc/flash_attn/src/flash_fwd_hdim64_bf16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_hdim96_fp16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_hdim96_bf16_causal_sm80.cu",
-                "csrc/flash_attn/src/flash_fwd_hdim128_fp16_causal_sm80.cu",
-                # "csrc/flash_attn/src/flash_fwd_hdim128_bf16_causal_sm80.cu",
+                # "csrc/flash_attn/src/flash_fwd_hdim128_fp16_causal_sm80.cu",
+                "csrc/flash_attn/src/flash_fwd_hdim128_bf16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_hdim160_fp16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_hdim160_bf16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_hdim192_fp16_causal_sm80.cu",
@@ -149,8 +149,8 @@ if not SKIP_CUDA_BUILD:
                 # "csrc/flash_attn/src/flash_bwd_hdim64_bf16_sm80.cu",
                 # "csrc/flash_attn/src/flash_bwd_hdim96_fp16_sm80.cu",
                 # "csrc/flash_attn/src/flash_bwd_hdim96_bf16_sm80.cu",
-                "csrc/flash_attn/src/flash_bwd_hdim128_fp16_sm80.cu",
-                # "csrc/flash_attn/src/flash_bwd_hdim128_bf16_sm80.cu",
+                # "csrc/flash_attn/src/flash_bwd_hdim128_fp16_sm80.cu",
+                "csrc/flash_attn/src/flash_bwd_hdim128_bf16_sm80.cu",
                 # "csrc/flash_attn/src/flash_bwd_hdim160_fp16_sm80.cu",
                 # "csrc/flash_attn/src/flash_bwd_hdim160_bf16_sm80.cu",
                 # "csrc/flash_attn/src/flash_bwd_hdim192_fp16_sm80.cu",
@@ -163,8 +163,8 @@ if not SKIP_CUDA_BUILD:
                 # "csrc/flash_attn/src/flash_bwd_hdim64_bf16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_bwd_hdim96_fp16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_bwd_hdim96_bf16_causal_sm80.cu",
-                "csrc/flash_attn/src/flash_bwd_hdim128_fp16_causal_sm80.cu",
-                # "csrc/flash_attn/src/flash_bwd_hdim128_bf16_causal_sm80.cu",
+                # "csrc/flash_attn/src/flash_bwd_hdim128_fp16_causal_sm80.cu",
+                "csrc/flash_attn/src/flash_bwd_hdim128_bf16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_bwd_hdim160_fp16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_bwd_hdim160_bf16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_bwd_hdim192_fp16_causal_sm80.cu",
@@ -177,8 +177,8 @@ if not SKIP_CUDA_BUILD:
                 # "csrc/flash_attn/src/flash_fwd_split_hdim64_bf16_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_split_hdim96_fp16_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_split_hdim96_bf16_sm80.cu",
-                "csrc/flash_attn/src/flash_fwd_split_hdim128_fp16_sm80.cu",
-                # "csrc/flash_attn/src/flash_fwd_split_hdim128_bf16_sm80.cu",
+                # "csrc/flash_attn/src/flash_fwd_split_hdim128_fp16_sm80.cu",
+                "csrc/flash_attn/src/flash_fwd_split_hdim128_bf16_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_split_hdim160_fp16_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_split_hdim160_bf16_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_split_hdim192_fp16_sm80.cu",
@@ -191,8 +191,8 @@ if not SKIP_CUDA_BUILD:
                 # "csrc/flash_attn/src/flash_fwd_split_hdim64_bf16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_split_hdim96_fp16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_split_hdim96_bf16_causal_sm80.cu",
-                "csrc/flash_attn/src/flash_fwd_split_hdim128_fp16_causal_sm80.cu",
-                # "csrc/flash_attn/src/flash_fwd_split_hdim128_bf16_causal_sm80.cu",
+                # "csrc/flash_attn/src/flash_fwd_split_hdim128_fp16_causal_sm80.cu",
+                "csrc/flash_attn/src/flash_fwd_split_hdim128_bf16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_split_hdim160_fp16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_split_hdim160_bf16_causal_sm80.cu",
                 # "csrc/flash_attn/src/flash_fwd_split_hdim192_fp16_causal_sm80.cu",
