@@ -78,7 +78,7 @@
 
 #define FP16_SWITCH(COND, ...)               \
   [&] {                                      \
-      using elem_type = cutlass::half_t;     \
+      using elem_type = cutlass::bfloat16_t;     \
       return __VA_ARGS__();                  \
   }()
 
