@@ -14,12 +14,12 @@ __global__ void max_pooling_1d_varlen_kernel(
     T* output,       // [num_heads, total_q, out_len]
     const int* cu_seqlens_q,  // cumulative sequence lengths for queries
     const int* cu_seqlens_k,  // cumulative sequence lengths for keys
+    const int* cache_lens,    // cache lengths for each batch [batch_size]
     int batch_size,
     int num_heads,
     int max_seqlen_q,
     int max_seqlen_k,
     int out_len,
-    int cache_len,
     int kernel_size,
     int stride,
     int padding,
@@ -68,6 +68,7 @@ __global__ void max_pooling_1d_varlen_kernel(
     T* out = output + bidh * cu_seqlens_q[batch_size] * out_len + bidq_global * out_len;
     
     // Calculate query block index for masking
+    int cache_len = cache_lens[batch_idx];  // Get cache_len for this batch
     int off_bq = (bidq_local + cache_len) / block_size;
 
     for (int k = threadIdx.x; k < out_len; k += blockDim.x) {
@@ -174,12 +175,12 @@ void max_pooling_1d_varlen_func(
     T* output,
     const int* cu_seqlens_q,
     const int* cu_seqlens_k,
+    const int* cache_lens,
     int batch_size,
     int num_heads,
     int max_seqlen_q,
     int max_seqlen_k,
     int out_len,
-    int cache_len,
     int kernel_size,
     int stride,
     int padding,
@@ -199,9 +200,8 @@ void max_pooling_1d_varlen_func(
     dim3 block(threads_per_block, 1);
     
     max_pooling_1d_varlen_kernel<<<grid, block, 0, stream>>>(
-        input, output, cu_seqlens_q, cu_seqlens_k, batch_size, num_heads, 
-        max_seqlen_q, max_seqlen_k, out_len, cache_len, kernel_size, stride, 
-        padding, block_size, local_blocks, init_blocks
+        input, output, cu_seqlens_q, cu_seqlens_k, cache_lens, batch_size, num_heads, 
+        max_seqlen_q, max_seqlen_k, out_len, kernel_size, stride, padding, block_size, local_blocks, init_blocks
     );
 }
 
