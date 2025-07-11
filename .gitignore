@@ -21,3 +21,14 @@ __pycache__/
 gradient_visualizations/
 *.log
 log/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.ico
+*.webp
+*.svg
+*.eps
+*.pdf
