@@ -151,6 +151,49 @@ void max_pooling_1d(
     });
 }
 
+void max_pooling_1d_varlen(
+    std::uintptr_t stream,
+    std::uintptr_t input,
+    std::uintptr_t output,
+    std::uintptr_t cu_seqlens_q,
+    std::uintptr_t cu_seqlens_k,
+    int dtype,
+    int batch_size,
+    int num_heads,
+    int max_seqlen_q,
+    int max_seqlen_k,
+    int out_len,
+    int cache_len,
+    int kernel_size,
+    int stride,
+    int padding,
+    int block_size,
+    int local_blocks,
+    int init_blocks
+) {
+    DTYPE_SWITCH(dtype, [&] {
+        max_pooling_1d_varlen_func<elem_type>(
+            reinterpret_cast<cudaStream_t>(stream),
+            reinterpret_cast<const elem_type*>(input),
+            reinterpret_cast<elem_type*>(output),
+            reinterpret_cast<const int*>(cu_seqlens_q),
+            reinterpret_cast<const int*>(cu_seqlens_k),
+            batch_size,
+            num_heads,
+            max_seqlen_q,
+            max_seqlen_k,
+            out_len,
+            cache_len,
+            kernel_size,
+            stride,
+            padding,
+            block_size,
+            local_blocks,
+            init_blocks
+        );
+    });
+}
+
 PYBIND11_MODULE(C, m) {
     m.doc() = "InfLLM V2 CUDA Implementation with FlashAttention";
     
@@ -161,6 +204,7 @@ PYBIND11_MODULE(C, m) {
     m.def("topk_to_uint64", &topk_to_uint64, "Convert topk indices directly to uint64 representation");
     m.def("uint64_to_bool", &uint64_to_bool, "Convert uint64 representation back to boolean mask");
     m.def("max_pooling_1d", &max_pooling_1d, "Max pooling 1d func");
+    m.def("max_pooling_1d_varlen", &max_pooling_1d_varlen, "Max pooling 1d func for variable-length sequences");
 
     m.def("fwd", &mha_fwd, "Forward pass");
     m.def("varlen_fwd", &mha_varlen_fwd, "Forward pass (variable length)");
