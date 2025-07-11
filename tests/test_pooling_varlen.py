@@ -202,6 +202,9 @@ def test_varlen_vs_triton():
     local_blocks = 32
     cache_len = 0
     
+    # Create cache_lens tensor (all zeros for this test)
+    cache_lens = torch.zeros(batch_size, dtype=torch.int32, device='cuda')
+    
     # 1. Run original transform_score on full data
     print("\n" + "="*60)
     print("Running transform_score (Triton implementation)...")
@@ -233,9 +236,9 @@ def test_varlen_vs_triton():
         attn_score_full,
         cu_seqlens_q,
         cu_seqlens_k,
+        cache_lens,
         max_seqlen_q,
         max_seqlen_k,
-        cache_len=cache_len,
         local_blocks=local_blocks,
         init_blocks=init_blocks,
         block_size=block_size,
@@ -563,6 +566,9 @@ def test_varlen_correctness():
     block_size = 64
     stride = 16
     
+    # Create cache_lens tensor (all zeros for this test)
+    cache_lens = torch.zeros(batch_size, dtype=torch.int32, device='cuda')
+    
     print(f"Input shape: {input_tensor.shape}")
     print(f"cu_seqlens_q: {cu_seqlens_q}")
     print(f"cu_seqlens_k: {cu_seqlens_k}")
@@ -575,9 +581,9 @@ def test_varlen_correctness():
             input_tensor,
             cu_seqlens_q,
             cu_seqlens_k,
+            cache_lens,
             max_seqlen_q,
             max_seqlen_k,
-            cache_len=cache_len,
             local_blocks=local_blocks,
             init_blocks=init_blocks,
             block_size=block_size,
