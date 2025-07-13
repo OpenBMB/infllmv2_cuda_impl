@@ -409,9 +409,6 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
         cute::cp_async_fence();
 
         if (!skip) {
-            if (cute::thread0()) {
-                printf("[fwd before gemm] bidh=%d, m_block=%d, n_block=%d\n", bidh, m_block, n_block);
-            }
             flash::gemm</*A_in_regs=*/Kernel_traits::Is_Q_in_regs>(
                 acc_s, tSrQ, tSrK, tSsQ, tSsK, tiled_mma, smem_tiled_copy_Q, smem_tiled_copy_K,
                 smem_thr_copy_Q, smem_thr_copy_K
@@ -492,9 +489,6 @@ inline __device__ void compute_attn_1rowblock(const Params &params, const int bi
         __syncthreads();
         flash::copy</*Is_even_MN=*/true, Is_even_K>(gmem_tiled_copy_QKV, tVgV(_, _, _, n_block), tVsV, tKVcKV, tKVpKV);
         cute::cp_async_fence();
-        if (cute::thread0()) {
-            printf("[fwd before gemm second loop] bidh=%d, m_block=%d, n_block=%d\n", bidh, m_block, n_block);
-        }
         flash::gemm</*A_in_regs=*/Kernel_traits::Is_Q_in_regs>(
             acc_s, tSrQ, tSrK, tSsQ, tSsK, tiled_mma, smem_tiled_copy_Q, smem_tiled_copy_K,
             smem_thr_copy_Q, smem_thr_copy_K
@@ -996,9 +990,6 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
         cute::cp_async_fence();
 
         if (!skip) {
-            if (cute::thread0()) {
-                printf("[split fwd before gemm] bidh=%d, m_block=%d, n_block=%d\n", bidh, m_block, n_block);
-            }
             flash::gemm(
                 acc_s, tSrQ, tSrK, tSsQ, tSsK, tiled_mma, smem_tiled_copy_Q, smem_tiled_copy_K,
                 smem_thr_copy_Q, smem_thr_copy_K
@@ -1087,9 +1078,6 @@ inline __device__ void compute_attn_1rowblock_splitkv(const Params &params, cons
         flash::copy</*Is_even_MN=*/true, Is_even_K>(gmem_tiled_copy_QKV, tVgV, tVsV, tKVcKV, tKVpKV);
         cute::cp_async_fence();
 
-        if (cute::thread0()) {
-            printf("[split fwd before gemm second loop] bidh=%d, m_block=%d, n_block=%d\n", bidh, m_block, n_block);
-        }
         flash::gemm(
             acc_s, tSrQ, tSrK, tSsQ, tSsK, tiled_mma, smem_tiled_copy_Q, smem_tiled_copy_K,
             smem_thr_copy_Q, smem_thr_copy_K
