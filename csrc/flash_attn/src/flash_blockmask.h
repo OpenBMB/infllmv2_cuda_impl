@@ -33,10 +33,10 @@ class fwdIterator{
         const int q_block_idx = loop_step_idx + cache_seqlen_k;
         this->k_window_right = q_block_idx / n_block_dim;
         this->k_window_left = this->k_window_right - params.block_window_size + 1;
-        if (cute::thread0()) {
-            printf("[fwdIterator init]: head_idx=%d, params.m_block_dim=%d, params.n_block_dim=%d, params.num_blocks_m=%d, params.num_blocks_n=%d, params.block_window_size=%d, k_window_right=%d, k_window_left=%d\n", 
-                head_idx, params.m_block_dim, params.n_block_dim, params.num_blocks_m, params.num_blocks_n, params.block_window_size, k_window_right, k_window_left);
-        }
+        // if (cute::thread0()) {
+        //     printf("[fwdIterator init]: head_idx=%d, params.m_block_dim=%d, params.n_block_dim=%d, params.num_blocks_m=%d, params.num_blocks_n=%d, params.block_window_size=%d, k_window_right=%d, k_window_left=%d\n", 
+        //         head_idx, params.m_block_dim, params.n_block_dim, params.num_blocks_m, params.num_blocks_n, params.block_window_size, k_window_right, k_window_left);
+        // }
     }
 
     __device__ int max_no_larger(int target) const {
@@ -150,9 +150,6 @@ class bwdIterator{
         
         // 存储每行使用的uint64数量，用于计算偏移
         this->uint64_per_row = uint64_per_row;
-        if (cute::thread0()) {
-            printf("[bwdIterator init]: max_block_idx=%d, binfo.actual_seqlen_q=%d, params.m_block_dim=%d, q_bit_position=%d, q_uint64_idx=%d, k_block_idx=%d, uint64_per_row=%d\n", max_block_idx, binfo.actual_seqlen_q, params.m_block_dim, q_bit_position, q_uint64_idx, k_block_idx, uint64_per_row);
-        }
     };
 
     __device__ int max_no_larger(int target) const {

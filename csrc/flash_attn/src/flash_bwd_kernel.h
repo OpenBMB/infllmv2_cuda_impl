@@ -334,9 +334,6 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
     int max_no_larger_idx = blockmask.max_no_larger(m_block_max-1);
     bool empty_col_flag = m_block_max <= m_block_min;
     empty_col_flag = empty_col_flag || max_no_larger_idx == -1 || max_no_larger_idx < m_block_min;
-    if (cute::thread0()) {
-        printf("[bwd empty_col_flag]: empty_col_flag=%d, max_no_larger_idx=%d, m_block_min=%d, m_block_max=%d\n", empty_col_flag, max_no_larger_idx, m_block_min, m_block_max);
-    }
     int calc_block_count = 0;
     __syncthreads();
 
@@ -399,9 +396,6 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
     Tensor tdOrdO = make_fragment_like(tdOgdO);
     Tensor tdOrO = make_fragment_like(tdOgO);
     if (leap > 0) {
-        if (cute::thread0()) {
-            printf("[bwd leap > 0]: bidb=%d, bidh=%d, m_block=%d, n_block=%d, leap=%d, params.do_row_stride=%d\n", bidb, bidh, m_block, n_block, leap, params.do_row_stride);
-        }
         tdOgdO.data() = tdOgdO.data() + (-int(leap * kBlockM * params.do_row_stride));
         flash::copy<true, Is_even_K>(gmem_tiled_copy_dO, tdOgdO, tdOsdO, tQcQ, tQpQ);
     }
@@ -534,9 +528,6 @@ inline __device__ void compute_dq_dk_dv_1colblock(const Params &params, const in
         //     cute::copy(smem_tiled_copy_KV, tSsK(_, _, k), tSrK_copy_view(_, _, k));
         // }
         // if (cute::thread0()) { print(tSrK); }
-        if (cute::thread0()) {
-            printf("[bwd before gemm] bidh=%d, m_block=%d, n_block=%d -> next_block_row_idx=%d (next_leap=%d)\n", bidh, m_block, n_block, next_block_row_idx, next_leap);
-        }
         flash::gemm(acc_s, tSrQ, tSrK, tSsQ, tSsK, tiled_mma_sdp,
                     smem_tiled_copy_QdO, smem_tiled_copy_KV, smem_thr_copy_QdO, smem_thr_copy_KV);
 
