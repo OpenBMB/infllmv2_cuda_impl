@@ -3,6 +3,9 @@ import torch
 import torch.nn.functional as F
 from infllm_v2 import infllmv2_attn_stage1
 
+def round_multiple(x, m):
+    return (x + m - 1) // m * m
+
 def naive_attention(q, k, v, cu_seqlens_q, cu_seqlens_k, causal=False):
     # 将 varlen 输入转换为 padded 形式
     batch_size = len(cu_seqlens_q) - 1
