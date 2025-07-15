@@ -188,6 +188,18 @@ void max_pooling_1d_varlen_func(
     int local_blocks,
     int init_blocks
 ) {
+    // Get device of input tensor and set it as current device
+    // int current_device;
+    // cudaGetDevice(&current_device);
+    
+    // cudaPointerAttributes attributes;
+    // cudaPointerGetAttributes(&attributes, input);
+    // int input_device = attributes.device;
+    
+    // if (input_device != current_device) {
+    //     cudaSetDevice(input_device);
+    // }
+    
     const int threads_per_block = 256;
     
     // Total number of queries across all batches
@@ -223,6 +235,18 @@ void max_pooling_1d_func(
     int local_blocks,
     int init_blocks
 ) {
+    // Get device of input tensor and set it as current device
+    int current_device;
+    cudaGetDevice(&current_device);
+    
+    cudaPointerAttributes attributes;
+    cudaPointerGetAttributes(&attributes, input);
+    int input_device = attributes.device;
+    
+    if (input_device != current_device) {
+        cudaSetDevice(input_device);
+    }
+    
     const int threads_per_block = 256;
     
     dim3 grid(q_len, num_heads);

@@ -21,7 +21,7 @@ def max_pooling_1d(
     out_len = (total_len + block_size - 1) // block_size
     output = torch.zeros(num_heads, q_len, out_len, device=input.device, dtype=input.dtype)
     C.max_pooling_1d(
-        torch.cuda.current_stream().cuda_stream,
+        torch.cuda.current_stream(input.device).cuda_stream,
         input.data_ptr(),
         output.data_ptr(),
         input.dtype == torch.bfloat16,
@@ -104,7 +104,7 @@ def max_pooling_1d_varlen(
     output = torch.zeros(num_heads, total_q, out_len, device=input.device, dtype=input.dtype)
     
     C.max_pooling_1d_varlen(
-        torch.cuda.current_stream().cuda_stream,
+        torch.cuda.current_stream(input.device).cuda_stream,
         input.data_ptr(),
         output.data_ptr(),
         cu_seqlens_q.data_ptr(),
