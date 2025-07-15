@@ -58,7 +58,7 @@ def topk_to_uint64(topk_idx: torch.Tensor, max_seqlen_k: int, block_size: int,
     
     # Call CUDA kernel
     C.topk_to_uint64(
-        torch.cuda.current_stream().cuda_stream,
+        torch.cuda.current_stream(topk_idx.device).cuda_stream,
         topk_idx.data_ptr(),
         result.data_ptr(),
         flat_dims,
