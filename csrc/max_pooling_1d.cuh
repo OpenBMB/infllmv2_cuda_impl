@@ -176,6 +176,7 @@ void max_pooling_1d_varlen_func(
     const int* cu_seqlens_q,
     const int* cu_seqlens_k,
     const int* cache_lens,
+    int device,
     int batch_size,
     int num_heads,
     int max_seqlen_q,
@@ -188,25 +189,17 @@ void max_pooling_1d_varlen_func(
     int local_blocks,
     int init_blocks
 ) {
-    // Get device of input tensor and set it as current device
-    // int current_device;
-    // cudaGetDevice(&current_device);
-    
-    // cudaPointerAttributes attributes;
-    // cudaPointerGetAttributes(&attributes, input);
-    // int input_device = attributes.device;
-    
-    // if (input_device != current_device) {
-    //     cudaSetDevice(input_device);
-    // }
-    
     const int threads_per_block = 256;
     
     // Total number of queries across all batches
+    // Get this value before changing device context
     int total_q;
     cudaMemcpyAsync(&total_q, &cu_seqlens_q[batch_size], sizeof(int), 
                     cudaMemcpyDeviceToHost, stream);
     cudaStreamSynchronize(stream);
+    
+    // Set device based on input device parameter
+    cudaSetDevice(device);
     
     dim3 grid(total_q, num_heads);
     dim3 block(threads_per_block, 1);
@@ -223,6 +216,7 @@ void max_pooling_1d_func(
     cudaStream_t stream,
     const T* input,
     T* output,
+    int device,
     int num_heads,
     int q_len,
     int k_len,
@@ -235,17 +229,8 @@ void max_pooling_1d_func(
     int local_blocks,
     int init_blocks
 ) {
-    // Get device of input tensor and set it as current device
-    int current_device;
-    cudaGetDevice(&current_device);
-    
-    cudaPointerAttributes attributes;
-    cudaPointerGetAttributes(&attributes, input);
-    int input_device = attributes.device;
-    
-    if (input_device != current_device) {
-        cudaSetDevice(input_device);
-    }
+    // Set device based on input device parameter
+    cudaSetDevice(device);
     
     const int threads_per_block = 256;
     

@@ -59,22 +59,16 @@ void topk_to_uint64_func(
     cudaStream_t stream,
     const int* topk_idx,          // Input topk indices
     uint64_t* result,             // Output uint64 array
+    int device,                   // Device index
     int batch_size,               // Total number of rows (flattened batch dimensions)
     int k,                        // Number of topk values per row
     int k_blocks,                 // Number of key blocks
     int n_uint64_per_row          // Number of uint64 needed per row
 ) {
-    // Get device of input tensor and set it as current device
-    // int current_device;
-    // cudaGetDevice(&current_device);
-    
-    // cudaPointerAttributes attributes;
-    // cudaPointerGetAttributes(&attributes, topk_idx);
-    // int input_device = attributes.device;
-    
-    // if (input_device != current_device) {
-    //     cudaSetDevice(input_device);
-    // }
+    // Set device based on input device parameter
+    // This is necessary in multi-GPU environments to ensure the kernel
+    // runs on the same device as the input tensors
+    cudaSetDevice(device);
     
     const int threads_per_block = 256;
     const int blocks_per_row = (batch_size + threads_per_block - 1) / threads_per_block;

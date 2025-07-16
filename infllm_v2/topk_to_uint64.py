@@ -61,16 +61,19 @@ def topk_to_uint64(topk_idx: torch.Tensor, max_seqlen_k: int, block_size: int,
         torch.cuda.current_stream(topk_idx.device).cuda_stream,
         topk_idx.data_ptr(),
         result.data_ptr(),
+        topk_idx.device.index,
         flat_dims,
         k,
         k_blocks,
         n_uint64_per_row
     )
     
+    # Log device information before return
+    print(f"topk_to_uint64 - input device: {topk_idx.device}, output device: {result.device}")
+    
     return result, k_blocks
 
 
-class TopkToUint64Converter:
     """
     A class that manages memory buffer for topk_to_uint64 conversions.
     This can improve performance by reusing memory across multiple calls.
