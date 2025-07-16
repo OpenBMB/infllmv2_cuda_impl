@@ -20,11 +20,14 @@ def max_pooling_1d(
     total_len = q_len + cache_len
     out_len = (total_len + block_size - 1) // block_size
     output = torch.zeros(num_heads, q_len, out_len, device=input.device, dtype=input.dtype)
+    with torch.cuda.device(input.device):
+        stream = torch.cuda.current_stream().cuda_stream
     C.max_pooling_1d(
-        torch.cuda.current_stream(input.device).cuda_stream,
+        stream,
         input.data_ptr(),
         output.data_ptr(),
         input.dtype == torch.bfloat16,
+        input.device.index,
         num_heads,
         q_len,
         k_len,
@@ -37,6 +40,10 @@ def max_pooling_1d(
         local_blocks,
         init_blocks,
     )
+    
+    # Log device information before return
+    print(f"max_pooling_1d - input device: {input.device}, output device: {output.device}")
+    
     return output
 
 
@@ -102,15 +109,17 @@ def max_pooling_1d_varlen(
     out_len = (total_len + block_size - 1) // block_size
     
     output = torch.zeros(num_heads, total_q, out_len, device=input.device, dtype=input.dtype)
-    
+    with torch.cuda.device(input.device):
+        stream = torch.cuda.current_stream(input.device).cuda_stream
     C.max_pooling_1d_varlen(
-        torch.cuda.current_stream(input.device).cuda_stream,
+        stream,
         input.data_ptr(),
         output.data_ptr(),
         cu_seqlens_q.data_ptr(),
         cu_seqlens_k.data_ptr(),
         cache_lens.data_ptr(),
         input.dtype == torch.bfloat16,
+        input.device.index,
         batch_size,
         num_heads,
         max_seqlen_q,
@@ -123,5 +132,9 @@ def max_pooling_1d_varlen(
         local_blocks,
         init_blocks,
     )
+    
+    # Log device information before return
+    print(f"max_pooling_1d_varlen - input device: {input.device}, output device: {output.device}")
+    
     return output
 
