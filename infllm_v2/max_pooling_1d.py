@@ -22,26 +22,26 @@ def max_pooling_1d(
     output = torch.zeros(num_heads, q_len, out_len, device=input.device, dtype=input.dtype)
     with torch.cuda.device(input.device):
         stream = torch.cuda.current_stream().cuda_stream
-    C.max_pooling_1d(
-        stream,
-        input.data_ptr(),
-        output.data_ptr(),
-        input.dtype == torch.bfloat16,
-        num_heads,
-        q_len,
-        k_len,
-        out_len,
-        cache_len,
-        kernel_size,
-        stride,
-        padding,
-        block_size,
-        local_blocks,
-        init_blocks,
-    )
+        C.max_pooling_1d(
+            stream,
+            input.data_ptr(),
+            output.data_ptr(),
+            input.dtype == torch.bfloat16,
+            num_heads,
+            q_len,
+            k_len,
+            out_len,
+            cache_len,
+            kernel_size,
+            stride,
+            padding,
+            block_size,
+            local_blocks,
+            init_blocks,
+        )
     
     # Log device information before return
-    print(f"max_pooling_1d - input device: {input.device}, output device: {output.device}")
+    # print(f"max_pooling_1d - input device: {input.device}, output device: {output.device}")
     
     return output
 
