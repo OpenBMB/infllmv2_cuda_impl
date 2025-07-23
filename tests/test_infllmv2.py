@@ -476,12 +476,12 @@ if __name__ == "__main__":
     # Define test configurations - focus on problem cases
     test_configs = [
         # seqlen_q, seqlen_k, d, causal, dtype, sparsity, batch_size, nheads, nheads_k, block_window_size
-        (128, 128, 128, True, torch.float16, 0, 1, 32, 2, 0),
-        (2048, 2048, 128, True, torch.float16, 0, 1, 32, 2, 2),
-        (2048, 2048, 128, True, torch.float16, 0.8, 1, 32, 2, 0),
+        (128, 128, 128, True, torch.bfloat16, 0, 1, 32, 2, 0),
+        (2048, 2048, 128, True, torch.bfloat16, 0, 1, 32, 2, 2),
+        (2048, 2048, 128, True, torch.bfloat16, 0.8, 1, 32, 2, 0),
         # # Only run the failing test case for detailed debugging
-        (256, 256, 128, True, torch.float16, 0.7, 2, 32, 2, 0),
-        (1024, 1024, 128, True, torch.float16, 0, 1, 32, 2, 0),
+        (256, 256, 128, True, torch.bfloat16, 0.7, 2, 32, 2, 0),
+        (1024, 1024, 128, True, torch.bfloat16, 0, 1, 32, 2, 0),
     ]
     
     # Run tests
