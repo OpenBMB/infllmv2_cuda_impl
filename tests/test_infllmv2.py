@@ -75,18 +75,17 @@ is_sm80 = torch.cuda.get_device_capability("cuda") == (8, 0)
 is_sm90 = torch.cuda.get_device_capability("cuda") == (9, 0)
 
 def test_flash_attn_varlen_block_output(
-    seqlen_q, seqlen_k, d, causal, dtype, sparsity, batch_size, nheads, nheads_k, block_window_size=0
+    seqlen_q, seqlen_k, d, causal, dtype, sparsity, batch_size, nheads, nheads_k
 ):
     logger.info(f"Starting test with parameters: seqlen_q={seqlen_q}, seqlen_k={seqlen_k}, d={d}, "
                 f"causal={causal}, dtype={dtype}, sparsity={sparsity}, batch_size={batch_size}, nheads={nheads}, "
-                f"nheads_k={nheads_k}, block_window_size={block_window_size}")
+                f"nheads_k={nheads_k}")
     
     # Create a unique config name for this test
     config_name = f"s{seqlen_q}x{seqlen_k}_d{d}_h{nheads}_kv{nheads_k}_sparsity{sparsity}"
     if causal:
         config_name += "_causal"
-    if block_window_size > 0:
-        config_name += f"_window{block_window_size}"
+
     
     start_time = time.time()
     
@@ -154,7 +153,6 @@ def test_flash_attn_varlen_block_output(
         return_attn_probs=False,
         block_table=None,
         topk_idx=topk_idx,  # Use topk_idx directly instead of base_blockmask
-        block_window_size=block_window_size,
     )
     logger.info(f"infllmv2_attn_varlen_func completed in {time.time() - attn_start:.2f}s")
     
@@ -162,7 +160,7 @@ def test_flash_attn_varlen_block_output(
     
     # Create expanded mask for reference implementation
     logger.info("Creating expanded mask for reference implementation")
-    mixed_mask = prepare_mixed_mask(base_blockmask, cu_seqlens_q, cu_seqlens_k, seqlen_q, seqlen_k, batch_size, m_block_dim=1, n_block_dim=block_size, block_window_size=block_window_size)
+    mixed_mask = prepare_mixed_mask(base_blockmask, cu_seqlens_q, cu_seqlens_k, seqlen_q, seqlen_k, batch_size, nheads=nheads, nheads_k=nheads_k, m_block_dim=1, n_block_dim=block_size)
 
     logger.info("Computing reference implementation")
     torch.cuda.empty_cache()
@@ -236,12 +234,7 @@ def test_flash_attn_varlen_block_output(
         print(f"     Block index: q_block={block_idx_q}")
         print(f"     Reference value: {val_ref:.6f}, Our value: {val_ours:.6f}, PyTorch value: {val_pt:.6f}")
         
-        # Check if this is at a block window boundary if block_window_size is being used
-        if block_window_size > 0:
-            # Check if this query block might be at a boundary of the attention window
-            boundary_distance = seq_idx % block_size
-            is_near_boundary = boundary_distance < 2 or boundary_distance > block_size - 3
-            print(f"     Near block boundary: {is_near_boundary} (position within block: {boundary_distance})")
+
     
     # Backward pass
     g = torch.randn_like(out)
@@ -271,7 +264,6 @@ def test_flash_attn_varlen_block_output(
             return_attn_probs=False,
             block_table=None,
             topk_idx=topk_idx,
-            block_window_size=block_window_size,
         )
         
         # Compute gradient using backward()
@@ -363,7 +355,7 @@ def test_flash_attn_varlen_block_output(
             
             # Add detailed debugging for gradient differences
             print(f"\n=== DETAILED GRADIENT ANALYSIS ===")
-            print(f"Block window size: {block_window_size}")
+
             
             # Find the indices with largest differences
             dq_diff = (dq - dq_ref).abs()
@@ -393,10 +385,7 @@ def test_flash_attn_varlen_block_output(
                     print(f"     Block indices: q_block={block_idx_q}, k_block={block_idx_k}")
                     print(f"     Reference value: {val_ref:.6f}, Our value: {val_ours:.6f}")
                     
-                    # Check if this is at a block window boundary
-                    if block_window_size > 0:
-                        is_boundary = abs(block_idx_q - block_idx_k) == block_window_size
-                        print(f"     At window boundary: {is_boundary}")
+
                 
                 return orig_indices
             
@@ -417,8 +406,8 @@ def test_flash_attn_varlen_block_output(
                     block_idx_k_list = []
                     
                     # For each possible k_seq (looking at surrounding blocks)
-                    for k_block in range(max(0, block_idx_q - block_window_size - 1), 
-                                        min(seqlen_k // block_size, block_idx_q + block_window_size + 2)):
+                    for k_block in range(max(0, block_idx_q - 1), 
+                                        min(seqlen_k // block_size, block_idx_q + 2)):
                         # Look at center position in each k_block
                         k_seq = k_block * block_size + block_size // 2
                         if k_seq < seqlen_k:
@@ -475,13 +464,13 @@ def test_flash_attn_varlen_block_output(
 if __name__ == "__main__":
     # Define test configurations - focus on problem cases
     test_configs = [
-        # seqlen_q, seqlen_k, d, causal, dtype, sparsity, batch_size, nheads, nheads_k, block_window_size
-        (128, 128, 128, True, torch.bfloat16, 0, 1, 32, 2, 0),
-        (2048, 2048, 128, True, torch.bfloat16, 0, 1, 32, 2, 2),
-        (2048, 2048, 128, True, torch.bfloat16, 0.8, 1, 32, 2, 0),
+        # seqlen_q, seqlen_k, d, causal, dtype, sparsity, batch_size, nheads, nheads_k
+        (128, 128, 128, True, torch.bfloat16, 0, 1, 32, 2),
+        (2048, 2048, 128, True, torch.bfloat16, 0, 2, 32, 2),
+        (2048, 2048, 128, True, torch.bfloat16, 0.8, 1, 32, 2),
         # # Only run the failing test case for detailed debugging
-        (256, 256, 128, True, torch.bfloat16, 0.7, 2, 32, 2, 0),
-        (1024, 1024, 128, True, torch.bfloat16, 0, 1, 32, 2, 0),
+        (256, 256, 128, True, torch.bfloat16, 0.7, 2, 32, 2),
+        (1024, 1024, 128, True, torch.bfloat16, 0, 1, 16, 1),
     ]
     
     # Run tests
@@ -509,7 +498,7 @@ if __name__ == "__main__":
         fwd_pass, bwd_pass = result
         fwd_status = "PASSED" if fwd_pass else "FAILED"
         bwd_status = "PASSED" if bwd_pass else "FAILED"
-        print(f"Test {i+1}: Forward={fwd_status}, Backward={bwd_status} - sparsity={config[5]}, block_window={config[9]}")
+        print(f"Test {i+1}: Forward={fwd_status}, Backward={bwd_status} - sparsity={config[5]}")
     
     # Overall result
     all_fwd_pass = all(result[0] for result in results)

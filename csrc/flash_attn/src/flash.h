@@ -77,7 +77,7 @@ struct Flash_fwd_params : public Qkv_params {
 
     uint64_t *__restrict__ blockmask;
     int m_block_dim, n_block_dim, num_k_heads;
-    int num_blocks_m, num_blocks_n, block_window_size;
+    int num_blocks_m, num_blocks_n;
 
     // The K_new and V_new matrices.
     void * __restrict__ knew_ptr;

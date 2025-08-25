@@ -538,8 +538,7 @@ mha_varlen_fwd(at::Tensor &q,  // total_q x num_heads x head_size, total_q := \s
                const float softcap,
                const bool return_softmax,
                c10::optional<at::Generator> gen_,
-               c10::optional<at::Tensor> &blockmask_,
-               int block_window_size) {
+               c10::optional<at::Tensor> &blockmask_) {
 
     // Otherwise the kernel will be launched from cuda:0 device
     at::cuda::CUDAGuard device_guard{q.device()};
@@ -709,7 +708,6 @@ mha_varlen_fwd(at::Tensor &q,  // total_q x num_heads x head_size, total_q := \s
         params.num_k_heads = 2;
         params.num_blocks_m = (total_q + 16 - 1) / 16;
         params.num_blocks_n = (max_seqlen_k + 64 - 1) / 64;
-        params.block_window_size = block_window_size;
     } else {
         params.blockmask = nullptr;
         params.m_block_dim = 1;
@@ -1550,8 +1548,7 @@ mha_fwd_kvcache(at::Tensor &q,                 // batch_size x seqlen_q x num_he
                 const float softcap,
                 bool is_rotary_interleaved,   // if true, rotary combines indices 0 & 1, else indices 0 & rotary_dim / 2
                 int num_splits,
-                c10::optional<at::Tensor> &blockmask_,
-                int block_window_size
+                        c10::optional<at::Tensor> &blockmask_
                 ) {
 
     // Otherwise the kernel will be launched from cuda:0 device
@@ -1695,7 +1692,6 @@ mha_fwd_kvcache(at::Tensor &q,                 // batch_size x seqlen_q x num_he
         params.num_k_heads = 2;
         params.num_blocks_m = (seqlen_q + 16 - 1) / 16;
         params.num_blocks_n = (seqlen_k + 64 - 1) / 64;
-        params.block_window_size = block_window_size;
     } else {
         params.blockmask = nullptr;
         params.m_block_dim = 1;
