@@ -76,14 +76,10 @@ __global__ void max_pooling_1d_varlen_kernel(
         int off_bk = k;
         
         // Check causal + local window mask based on exact criteria from transform_score
-        bool should_mask_inf = (off_bk < init_blocks);
-        bool should_mask_neg_inf = (off_bq >= off_bk) && (off_bq < off_bk + local_blocks);
+        bool should_mask_inf = (off_bk < init_blocks) || ((off_bq >= off_bk) && (off_bq <= off_bk + local_blocks));
         
         if (should_mask_inf) {
             out[k] = TypeTraits<T>::inf();
-        }
-        else if (should_mask_neg_inf) {
-            out[k] = -TypeTraits<T>::inf();
         }
         else {
             // Compute max pooling for other areas
@@ -136,15 +132,12 @@ __global__ void max_pooling_1d_kernel(
         int off_bk = k;
         
         // Check causal + local window mask based on exact criteria from transform_score
-        bool should_mask_inf = (off_bk < init_blocks);
-        bool should_mask_neg_inf = (off_bq >= off_bk) && (off_bq < off_bk + local_blocks);
-        
+        bool should_mask_inf = (off_bk < init_blocks) || ((off_bq >= off_bk) && (off_bq <= off_bk + local_blocks));
+
         if (should_mask_inf) {
             out[k] = TypeTraits<T>::inf();
         }
-        else if (should_mask_neg_inf) {
-            out[k] = -TypeTraits<T>::inf();
-        }
+
         else {
             // Compute max pooling for other areas
             int start = k * stride - padding;

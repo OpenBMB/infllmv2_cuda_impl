@@ -31,12 +31,6 @@ class fwdIterator{
                         loop_step_idx * uint64_per_row;
 
         const int q_block_idx = loop_step_idx + cache_seqlen_k;
-        this->k_window_right = q_block_idx / n_block_dim;
-        this->k_window_left = this->k_window_right - params.block_window_size + 1;
-        // if (cute::thread0()) {
-        //     printf("[fwdIterator init]: head_idx=%d, params.m_block_dim=%d, params.n_block_dim=%d, params.num_blocks_m=%d, params.num_blocks_n=%d, params.block_window_size=%d, k_window_right=%d, k_window_left=%d\n", 
-        //         head_idx, params.m_block_dim, params.n_block_dim, params.num_blocks_m, params.num_blocks_n, params.block_window_size, k_window_right, k_window_left);
-        // }
     }
 
     __device__ int max_no_larger(int target) const {
@@ -45,9 +39,6 @@ class fwdIterator{
             return -1;
         };
         
-        if (k_window_left <= target && target <= k_window_right){
-            return target;
-        }
         
         // 目标值不能超过最大块索引
         target = min(target, max_block_idx - 1);
@@ -87,8 +78,6 @@ class fwdIterator{
             }
         }
 
-        if (target > k_window_right && result <= k_window_right && k_window_left <= k_window_right)
-            return k_window_right;
         
         // 没有找到设置位
         return result;
@@ -102,7 +91,6 @@ class fwdIterator{
     int m_block_dim, n_block_dim;
     int n_block_min, n_block_max;
     int batch_idx, head_idx;
-    int k_window_left, k_window_right;
 };
 
 class bwdIterator{
@@ -118,7 +106,7 @@ class bwdIterator{
         this -> n_block_dim = params.n_block_dim;
         this -> m_block_min = m_block_min;
         this -> m_block_max = m_block_max;
-        this -> block_window_size = params.block_window_size;
+
         this -> loop_step_idx = loop_step_idx;
             
 
@@ -163,25 +151,6 @@ class bwdIterator{
         // 目标值不能超过最大块索引
         target = min(target, max_block_idx - 1);
         
-        // 窗口计算结果
-        int window_result = -1;
-        
-        // 检查窗口条件
-        if (block_window_size > 0) {
-            // 计算k的位置
-            auto round_to_multiple = [](int x, int m) { return (x + m - 1) / m * m; };
-            int k_idx = loop_step_idx * n_block_dim;
-            
-            // 检查target是否在窗口内 (从k往右算)
-            bool is_in_window = (k_idx >= target - (block_window_size * n_block_dim) && k_idx <= round_to_multiple(target, n_block_dim));
-            if (is_in_window) {
-                return target; // 如果在窗口内，直接返回target
-            } else if (target > k_idx) {
-                // 在k_idx右侧找到不大于target的最大值
-                int right_boundary = k_idx + block_window_size * n_block_dim;
-                window_result = min(target, right_boundary);
-            }
-        }
         
         // 接下来检查blockmask
         const int blocks_per_uint64 = 64;
@@ -218,8 +187,8 @@ class bwdIterator{
             }
         }
 
-        // 返回blockmask结果和窗口结果的较大值
-        return max(blockmask_result, window_result);
+        // 返回blockmask结果
+        return blockmask_result;
     };
 
 
@@ -231,8 +200,6 @@ class bwdIterator{
     int m_block_min, m_block_max;
     int batch_idx, head_idx;
     int loop_step_idx;
-    int q_window_left, q_window_right;
-    int block_window_size;
 };
 
 }  // namespace flash

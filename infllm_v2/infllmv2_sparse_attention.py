@@ -66,15 +66,29 @@ def _infllmv2_attn_varlen_forward(
     leftpad_k: Optional[torch.Tensor] = None,
     seqused_k: Optional[torch.Tensor] = None,
     topk_idx: Optional[torch.Tensor] = None,
-    block_window_size: int = 0,
+
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     q, k, v = [maybe_contiguous(x) for x in (q, k, v)]
 
     if topk_idx is not None:
+        # Calculate group size (number of query heads per K/V head)
+        nheads_q = q.shape[1]
+        nheads_k = k.shape[1]
+        group_size = nheads_q // nheads_k
         head_dim = q.shape[-1]
-        q = q.reshape(-1, 2, 16, head_dim).transpose(1, 2).reshape(-1, 2, head_dim).contiguous()
-        cu_seqlens_q = cu_seqlens_q * 16
-        max_seqlen_q = max_seqlen_q * 16
+        
+        # Optimize for MQA case (nheads_k == 1)
+        if nheads_k == 1:
+            # Direct reshape for MQA - no transpose needed
+            q = q.reshape(-1, 1, head_dim).contiguous()
+            cu_seqlens_q = cu_seqlens_q * nheads_q
+            max_seqlen_q = max_seqlen_q * nheads_q
+        else:
+            # General case for GQA/MHA
+            q = q.reshape(-1, nheads_k, group_size, head_dim).transpose(1, 2).reshape(-1, nheads_k, head_dim).contiguous()
+            cu_seqlens_q = cu_seqlens_q * group_size
+            max_seqlen_q = max_seqlen_q * group_size
+        
         assert topk_idx.dtype == torch.int32
         fwd_blockmask_uint64, _ = cuda_topk_to_uint64(topk_idx, max_seqlen_k, 64) # N_BLOCK_DIM=64
     else:
@@ -103,12 +117,17 @@ def _infllmv2_attn_varlen_forward(
         return_softmax,
         None,
         fwd_blockmask_uint64,
-        block_window_size,
     )
     # if out.isnan().any() or softmax_lse.isnan().any():
     #     breakpoint()
     if topk_idx is not None:
-        out = out.reshape(-1, 16, 2, head_dim).transpose(1, 2).reshape(-1, 32, head_dim).contiguous()
+        # Reshape output back to original dimensions
+        if nheads_k == 1:
+            # Direct reshape for MQA - no transpose needed
+            out = out.reshape(-1, nheads_q, head_dim).contiguous()
+        else:
+            # General case for GQA/MHA
+            out = out.reshape(-1, group_size, nheads_k, head_dim).transpose(1, 2).reshape(-1, nheads_q, head_dim).contiguous()
     
     return out, softmax_lse, S_dmask, fwd_blockmask_uint64, rng_state
 
@@ -150,28 +169,43 @@ def _infllmv2_attn_varlen_backward(
     # Get original shapes and dimensions
     total_q, nheads_q, dim = q.shape
     nheads_k = k.shape[-2]
-    # Memory-efficient reshaping - break into steps with immediate cleanup
-    q_final = q.reshape(total_q, nheads_k, group_size, dim)
-    q_final = q_final.permute(0, 2, 1, 3)
-    q_final = q_final.reshape(total_q * group_size, nheads_k, dim).contiguous()
     
-    dout_final = dout.reshape(total_q, nheads_k, group_size, dim)
-    dout_final = dout_final.permute(0, 2, 1, 3)
-    dout_final = dout_final.reshape(total_q * group_size, nheads_k, dim).contiguous()
-    
-    out_final = out.reshape(total_q, nheads_k, group_size, dim)
-    out_final = out_final.permute(0, 2, 1, 3)
-    out_final = out_final.reshape(total_q * group_size, nheads_k, dim).contiguous()
+    # Optimize for MQA case (nheads_k == 1)
+    if nheads_k == 1:
+        # Direct reshape for MQA - no transpose needed
+        q_final = q.reshape(total_q * nheads_q, 1, dim).contiguous()
+        dout_final = dout.reshape(total_q * nheads_q, 1, dim).contiguous()
+        out_final = out.reshape(total_q * nheads_q, 1, dim).contiguous()
+    else:
+        # Memory-efficient reshaping for GQA/MHA - break into steps with immediate cleanup
+        q_final = q.reshape(total_q, nheads_k, group_size, dim)
+        q_final = q_final.permute(0, 2, 1, 3)
+        q_final = q_final.reshape(total_q * group_size, nheads_k, dim).contiguous()
+        
+        dout_final = dout.reshape(total_q, nheads_k, group_size, dim)
+        dout_final = dout_final.permute(0, 2, 1, 3)
+        dout_final = dout_final.reshape(total_q * group_size, nheads_k, dim).contiguous()
+        
+        out_final = out.reshape(total_q, nheads_k, group_size, dim)
+        out_final = out_final.permute(0, 2, 1, 3)
+        out_final = out_final.reshape(total_q * group_size, nheads_k, dim).contiguous()
     # q = q.reshape(-1, 16, 2, head_dim).reshape(-1, 2, head_dim)
     # breakpoint()
     # with open("/user/luopeiyan/a/Block-Sparse-Attention/tests/after_q_output_flash_attn_varlen_forward.txt", "a+") as f:
     #     f.write(str(q) + "\n") 
     # Reduce memory by computing cu_seqlens_q_expanded in-place
-    cu_seqlens_q_expanded = torch.zeros(cu_seqlens_q.shape[0], device=cu_seqlens_q.device, dtype=cu_seqlens_q.dtype)
-    for i in range(cu_seqlens_q.shape[0]-1):
-        cu_seqlens_q_expanded[i+1] = (cu_seqlens_q[i+1] - cu_seqlens_q[i]) * group_size + cu_seqlens_q_expanded[i]
-    
-    max_seqlen_q_expanded = max_seqlen_q * group_size
+    if nheads_k == 1:
+        # For MQA, multiply by nheads_q
+        cu_seqlens_q_expanded = torch.zeros(cu_seqlens_q.shape[0], device=cu_seqlens_q.device, dtype=cu_seqlens_q.dtype)
+        for i in range(cu_seqlens_q.shape[0]-1):
+            cu_seqlens_q_expanded[i+1] = (cu_seqlens_q[i+1] - cu_seqlens_q[i]) * nheads_q + cu_seqlens_q_expanded[i]
+        max_seqlen_q_expanded = max_seqlen_q * nheads_q
+    else:
+        # For GQA/MHA, multiply by group_size
+        cu_seqlens_q_expanded = torch.zeros(cu_seqlens_q.shape[0], device=cu_seqlens_q.device, dtype=cu_seqlens_q.dtype)
+        for i in range(cu_seqlens_q.shape[0]-1):
+            cu_seqlens_q_expanded[i+1] = (cu_seqlens_q[i+1] - cu_seqlens_q[i]) * group_size + cu_seqlens_q_expanded[i]
+        max_seqlen_q_expanded = max_seqlen_q * group_size
     # Create dq_temp directly with correct shape
     dq_temp = torch.empty_like(q_final)
     
@@ -212,9 +246,14 @@ def _infllmv2_attn_varlen_backward(
     torch.cuda.empty_cache()
     
     # Reshape dq_temp directly back to original shape
-    dq_temp = dq_temp.reshape(total_q, group_size, nheads_k, dim)
-    dq_temp = dq_temp.permute(0, 2, 1, 3)
-    dq_temp = dq_temp.reshape(total_q, nheads_q, dim)
+    if nheads_k == 1:
+        # Direct reshape for MQA - no transpose needed
+        dq_temp = dq_temp.reshape(total_q, nheads_q, dim)
+    else:
+        # General case for GQA/MHA
+        dq_temp = dq_temp.reshape(total_q, group_size, nheads_k, dim)
+        dq_temp = dq_temp.permute(0, 2, 1, 3)
+        dq_temp = dq_temp.reshape(total_q, nheads_q, dim)
     
     # Use in-place copy instead of assignment
     dq.copy_(dq_temp)
@@ -254,7 +293,6 @@ class Infllmv2AttnVarlenFunc(torch.autograd.Function):
         return_softmax,
         block_table,
         topk_idx,
-        block_window_size,
     ):
         if softmax_scale is None:
             softmax_scale = q.shape[-1] ** (-0.5)
@@ -281,7 +319,6 @@ class Infllmv2AttnVarlenFunc(torch.autograd.Function):
             return_softmax=return_softmax and dropout_p > 0,
             block_table=block_table,
             topk_idx=topk_idx,
-            block_window_size=block_window_size,
         )
         ctx.save_for_backward(
             q, k, v, out_padded, softmax_lse, cu_seqlens_q, cu_seqlens_k, fwd_blockmask_uint64, rng_state
@@ -366,7 +403,6 @@ def infllmv2_attn_varlen_func(
     return_attn_probs=False,
     block_table=None,
     topk_idx=None,
-    block_window_size=0,
 ):
     """dropout_p should be set to 0.0 during evaluation
     Supports multi-query and grouped-query attention (MQA/GQA) by passing in K, V with fewer heads
@@ -441,7 +477,6 @@ def infllmv2_attn_varlen_func(
         return_attn_probs,
         block_table,
         topk_idx,
-        block_window_size,
     )
 
 
@@ -588,7 +623,6 @@ def infllmv2_attn_with_kvcache(
     num_splits=0,
     return_softmax_lse=False,
     topk_idx=None,
-    block_window_size=0,
 ):
     """
     If k and v are not None, k_cache and v_cache will be updated *inplace* with the new values from
@@ -716,6 +750,5 @@ def infllmv2_attn_with_kvcache(
         rotary_interleaved,
         num_splits,
         blockmask,
-        block_window_size,
     )
     return (out, softmax_lse) if return_softmax_lse else out

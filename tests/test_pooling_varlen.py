@@ -72,8 +72,8 @@ def _transform_score_kernel(
     off_bk = k_start + tl.arange(0, BLOCK_SIZE_K)
     s = tl.where(
         (off_bq[:, None] >= off_bk[None, :])  # causal mask
-            & (off_bq[:, None] < off_bk[None, :] + local_blocks),  # local window
-        float("-inf"),
+            & (off_bq[:, None] <= off_bk[None, :] + local_blocks),  # local window
+        float("inf"),
         s,
     )
     s = tl.where(        
@@ -165,7 +165,7 @@ def transform_score(
 def test_varlen_vs_triton():
     """Test varlen max pooling against triton transform_score with multi-batch data"""
     # Load data from multibatch directory
-    data_dir = "/cache/suzhou/downloads/multibatch"
+    data_dir = "/user/qiqi/tmp/multibatch"
     
     print(f"Loading data from {data_dir}")
     attn_score_full = torch.load(f"{data_dir}/attn_score.pt").to(torch.bfloat16)
@@ -245,7 +245,7 @@ def test_varlen_vs_triton():
         stride=kernel_stride
     )
     print(f"Varlen result shape: {varlen_result.shape}")
-    
+
     # 3. Compare results
     print("\n" + "="*60)
     print("Comparing varlen results with Triton...")
@@ -657,7 +657,7 @@ if __name__ == "__main__":
     print("="*60)
     
     # First test basic correctness
-    test_varlen_correctness()
+    # test_varlen_correctness()
     
     # Then compare with Triton implementation
     print("\n\n")

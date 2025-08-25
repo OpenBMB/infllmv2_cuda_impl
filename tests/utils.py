@@ -1024,7 +1024,7 @@ def replace_ones_with_count(tensor):
     return tensor
 
 
-def prepare_mixed_mask(base_blockmask, cu_seqlens_q, cu_seqlens_k, seqlen_q, seqlen_k, batch_size, nheads = 32, nheads_k= 2, m_block_dim=128, n_block_dim=128, block_window_size=0):
+def prepare_mixed_mask(base_blockmask, cu_seqlens_q, cu_seqlens_k, seqlen_q, seqlen_k, batch_size, nheads = 32, nheads_k= 2, m_block_dim=128, n_block_dim=128):
     """
     Expand a block-level sparsity mask to a token-level mask for attention_blocksparse_ref,
     handling variable sequence lengths per batch item.
@@ -1039,7 +1039,7 @@ def prepare_mixed_mask(base_blockmask, cu_seqlens_q, cu_seqlens_k, seqlen_q, seq
         batch_size: Number of batches
         m_block_dim: Block size for query dimension (default: 128)
         n_block_dim: Block size for key dimension (default: 128)
-        block_window_size: Number of blocks to the left of each query block to attend to (default: 0)
+
     
     Returns:
         mixed_mask: Bool tensor of shape [batch_size, num_heads, seqlen_q, seqlen_k]
@@ -1052,57 +1052,7 @@ def prepare_mixed_mask(base_blockmask, cu_seqlens_q, cu_seqlens_k, seqlen_q, seq
     def round_to_multiple(x, base):
         return ((x + base - 1) // base) * base
     
-    # Apply block window logic if block_window_size > 0
-    if block_window_size > 0:
-        num_blocks_k = modified_blockmask.shape[2]  # number of blocks in key dimension
-        
-        # Generate block indices for each query position
-        total_unpadded_tokens = modified_blockmask.shape[1]
-        
-        # Calculate batch-relative positions for each token in the unpadded sequence
-        q_positions = torch.arange(total_unpadded_tokens, device=modified_blockmask.device)
-        
-        # Properly determine which batch each position belongs to
-        batch_indices = torch.zeros_like(q_positions)
-        for b in range(1, len(cu_seqlens_q)):
-            batch_indices = torch.where(
-                q_positions >= cu_seqlens_q[b-1],
-                torch.where(
-                    q_positions < cu_seqlens_q[b],
-                    torch.tensor(b-1, device=q_positions.device),
-                    batch_indices
-                ),
-                batch_indices
-            )
-        
-        # Calculate relative positions within each batch
-        relative_positions = q_positions - cu_seqlens_q[batch_indices]
-        
-        # For each query position, check if key blocks are within the window range
-        # according to kernel logic: k_idx >= q_block_idx - (block_window_size * n_block_dim) && k_idx <= q_block_idx
-        for i in range(total_unpadded_tokens):
-            # Get the batch this token belongs to
-            batch_idx = batch_indices[i]
-            
-            # Calculate cache_seqlen_k for this batch (matching CUDA logic)
-            # cache_seqlen_k = actual_seqlen_k - actual_seqlen_q / m_block_dim
-            actual_seqlen_q = cu_seqlens_q[batch_idx + 1] - cu_seqlens_q[batch_idx]
-            actual_seqlen_k = cu_seqlens_k[batch_idx + 1] - cu_seqlens_k[batch_idx]
-            cache_seqlen_k = actual_seqlen_k - actual_seqlen_q
-            
-            # Calculate q_block_idx as token position (matching CUDA: loop_step_idx + cache_seqlen_k)
-            loop_step_idx = relative_positions[i]
-            q_block_idx = loop_step_idx + cache_seqlen_k
-            
-            # Calculate window boundaries (matching CUDA logic)
-            k_window_right = q_block_idx // n_block_dim
-            k_window_left = k_window_right - block_window_size + 1
-            
-            for k_block in range(num_blocks_k):
-                # Matching the kernel logic exactly
-                if k_window_left <= k_block and k_block <= k_window_right:
-                    # Set this position to True for all heads
-                    modified_blockmask[:, i, k_block] = True
+
     
     # Expand blocks to token level for all heads
     expanded_mask = repeat(modified_blockmask, "h r c -> (h g) r (c n)", 
@@ -1134,7 +1084,7 @@ def prepare_mixed_mask(base_blockmask, cu_seqlens_q, cu_seqlens_k, seqlen_q, seq
     mixed_mask = torch.stack(batch_masks, dim=0)
     return mixed_mask
 
-def prepare_batch_mixed_mask(base_blockmask, seqlen_q, seqlen_k, nheads=32, nheads_k=2, n_block_dim=128, block_window_size=0):
+def prepare_batch_mixed_mask(base_blockmask, seqlen_q, seqlen_k, nheads=32, nheads_k=2, n_block_dim=128):
     """
     Expand a batched block-level sparsity mask to a token-level mask for attention_blocksparse_ref.
     
@@ -1146,10 +1096,7 @@ def prepare_batch_mixed_mask(base_blockmask, seqlen_q, seqlen_k, nheads=32, nhea
         nheads: Total number of attention heads
         nheads_k: Number of key heads (usually fewer than query heads)
         n_block_dim: Block size for key dimension (default: 128)
-        block_window_size: Number of blocks to attend to (default: 0)
-                          In decoding scenario where queries come after keys,
-                          this allows controlling how many past key blocks each
-                          query position can attend to.
+
     
     Returns:
         mixed_mask: Bool tensor of shape [batch_size, num_heads, seqlen_q, seqlen_k]
@@ -1160,42 +1107,7 @@ def prepare_batch_mixed_mask(base_blockmask, seqlen_q, seqlen_k, nheads=32, nhea
     # Make a copy of base_blockmask to avoid modifying the original
     modified_blockmask = base_blockmask.clone()
     
-    # Apply block window logic if block_window_size > 0
-    if block_window_size > 0:
-        # Helper function to round up to multiple
-        def round_to_multiple(x, base):
-            return ((x + base - 1) // base) * base
-        
-        # Get number of blocks in key dimension
-        num_blocks_k = modified_blockmask.shape[3]  # [batch, heads_k, seqlen_q, num_blocks_k]
-        
-        # For each batch, head, and query position, apply window logic
-        for b in range(batch_size):
-            for h in range(modified_blockmask.shape[1]):  # Loop through heads_k
-                for q_pos in range(modified_blockmask.shape[2]):  # Loop through seqlen_q
-                    # In batch mode, we don't have variable sequence lengths per batch
-                    # So we use a simplified version of the CUDA logic
-                    # Assuming seqlen_k is the key sequence length and seqlen_q is the query sequence length
-                    
-                    # Calculate cache_seqlen_k (matching CUDA logic but simplified for batch mode)
-                    # Since m_block_dim is not passed, we assume it's the same as n_block_dim
-                    m_block_dim = n_block_dim  # Simplified assumption
-                    cache_seqlen_k = seqlen_k - seqlen_q // m_block_dim
-                    
-                    # Calculate q_block_idx as token position (matching CUDA: loop_step_idx + cache_seqlen_k)
-                    loop_step_idx = q_pos
-                    q_block_idx = loop_step_idx + cache_seqlen_k
-                    
-                    # Calculate window boundaries (matching CUDA logic)
-                    k_window_right = q_block_idx // n_block_dim
-                    k_window_left = k_window_right - block_window_size + 1
-                    
-                    # Apply window logic to each key block
-                    for k_block in range(num_blocks_k):
-                        # Match the kernel logic exactly
-                        if k_window_left <= k_block and k_block <= k_window_right:
-                            # Set this position to True (block should be attended to)
-                            modified_blockmask[b, h, q_pos, k_block] = True
+
     
     # First, we need to expand the blocks to token level
     # Repeat each block index into the full block_size in key dimension
