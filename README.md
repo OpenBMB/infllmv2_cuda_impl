@@ -135,14 +135,12 @@ from infllm_v2 import infllmv2_attn_varlen_func
 #   - cu_seqlens_q, cu_seqlens_k: Cumulative sequence lengths
 #   - topk_idx: Selected block indices from Stage 1
 #   - max_seqlen_q, max_seqlen_k: Maximum sequence lengths
-#   - block_window_size: Optional local attention window size
 
 out_unpad = infllmv2_attn_varlen_func(
     q_unpad, k_unpad, v_unpad,
     cu_seqlens_q, cu_seqlens_k,
     topk_idx,  # Block indices selected in Stage 1
-    max_seqlen_q, max_seqlen_k,
-    block_window_size = 0,  # Additional local window for attention
+    max_seqlen_q, max_seqlen_k
 )
 ```
 
@@ -159,7 +157,6 @@ out_unpad = infllmv2_attn_varlen_func(
 - **q_unpad**: Query tensor in unpadded format (bfloat16)
 - **k_unpad, v_unpad**: Key and Value tensors in unpadded format
 - **topk_idx**: Integer tensor containing selected block indices from Stage 1
-- **block_window_size**: Size of local attention window (0 to disable)
 
 
 ### Performance Considerations
