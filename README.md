@@ -65,7 +65,7 @@ The sparse attention stage performs standard attention computation, but only on 
 
 ### Build from Source
 
-#### For Training (main branch)
+#### For Training / Inference (main branch)
 
 ```bash
 # Clone the repository and use main branch for training
@@ -77,14 +77,6 @@ git checkout main
 pip install -e .
 
 ```
-
-#### For Hugging Face Inference (feature_infer branch)
-
-```bash
-# Clone the repository and use feature_infer branch for inference
-git clone https://github.com/OpenBMB/infllm_v2_cuda.git
-cd infllm_v2_cuda
-git checkout feature_infer
 
 # Install with CUDA kernel compilation
 pip install -e .
