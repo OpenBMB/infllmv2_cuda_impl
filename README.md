@@ -1,6 +1,5 @@
 # InfLLM V2 CUDA Kernel Implementation
 
-[English](README.md) | [中文](README_zh.md)
 
 This repository contains the optimized CUDA kernel implementation for **InfLLM V2's Two-Stage Sparse Attention Mechanism**. Our implementation provides high-performance kernels for both Stage 1 (Top-K Context Selection) and Stage 2 (Sparse Attention Computation), enabling Large Language Models (LLMs) to efficiently process long contexts with trainable sparse patterns.
 
