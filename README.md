@@ -17,7 +17,7 @@ This CUDA kernel implementation includes both stages, providing:
 
 Built upon [FlashAttention](https://github.com/Dao-AILab/flash-attention), our kernels leverage efficient memory access patterns and optimized implementations for both stages.
 
-![InfLLM V2 Architecture](assets/infllm-v2.pdf)
+![InfLLM V2 Architecture](assets/infllm-v2.jpg)
 
 ## Two-Stage Architecture
 
