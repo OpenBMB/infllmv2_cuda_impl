@@ -67,15 +67,6 @@ The sparse attention stage performs standard attention computation, but only on 
 #### For Training / Inference (main branch)
 
 ```bash
-# Clone the repository and use main branch for training
-git clone https://github.com/OpenBMB/infllm_v2_cuda.git
-cd infllm_v2_cuda
-git checkout main
-
-# Install with CUDA kernel compilation
-pip install -e .
-
-```
 
 # Install with CUDA kernel compilation
 pip install -e .
