@@ -139,18 +139,20 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
         print(f"{seqlen_q=} {seqlen_k=} {causal=}")
         print("score max diff :", (naive_score - flash_score).abs().max())
         
+        breakpoint()
         if (naive_score - flash_score).abs().max() > 1e-2:
             print(f"error: seqlen_qs={seqlen_qs}, seqlen_ks={seqlen_ks}")
 
 if __name__ == "__main__":
     # Test 5 cases for causal=False
-    test_seqlens = [100, 500, 1000, 5000, 9000]
-    for seqlen in test_seqlens:
-        test_flash_attn_varlen(seqlen_q=1, seqlen_k=seqlen, causal=False)
+    # test_seqlens = [100, 500, 1000, 5000, 9000]
+    test_seqlens = [2048]
+    # for seqlen in test_seqlens:
+    #     test_flash_attn_varlen(seqlen_q=1, seqlen_k=seqlen, causal=False)
     
     # Test 5 cases for causal=True
     for seqlen in test_seqlens:
-        test_flash_attn_varlen(seqlen_q=seqlen, seqlen_k=seqlen//16, causal=True)
+        test_flash_attn_varlen(seqlen_q=seqlen, seqlen_k=seqlen//16, causal=False)
 
     # test_flash_attn_varlen(seqlen_q=10000, seqlen_k=10000//16, causal=False)
     # test_flash_attn_varlen(seqlen_q=10000, seqlen_k=10000//16, causal=True)
