@@ -486,6 +486,7 @@ def infllmv2_attn_stage1(
     v,
     cu_seqlens_q,
     cu_seqlens_k,
+    cu_seqlens_v,
     max_seqlen_q,
     max_seqlen_k,
     dropout_p=0.0,
@@ -512,7 +513,9 @@ def infllmv2_attn_stage1(
         cu_seqlens_q: (batch_size + 1,), dtype torch.int32. The cumulative sequence lengths
            of the sequences in the batch, used to index into q.
         cu_seqlens_k: (batch_size + 1,), dtype torch.int32. The cumulative sequence lengths
-           of the sequences in the batch, used to index into kv.
+           of the sequences in the batch, used to index into k.
+        cu_seqlens_v: (batch_size + 1,), dtype torch.int32. The cumulative sequence lengths
+           of the sequences in the batch, used to index into v.
         max_seqlen_q: int. Maximum query sequence length in the batch.
         max_seqlen_k: int. Maximum key sequence length in the batch.
         dropout_p: float. Dropout probability.
@@ -563,6 +566,7 @@ def infllmv2_attn_stage1(
         None,
         cu_seqlens_q_adjusted,
         cu_seqlens_k,
+        cu_seqlens_v,
         None,
         None,
         block_table,
