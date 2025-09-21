@@ -973,16 +973,16 @@ mha_varlen_fwd_stage1(at::Tensor &q,  // total_q x num_heads x head_size, total_
 
     params.cu_seqlens_v = static_cast<int *>(cu_seqlens_v.data_ptr());
     params.is_seqlens_v_cumulative = true;  // Treat cu_seqlens_v as cumulative sequence lengths
-    {
-        // Copy cu_seqlens_v to CPU for printing
-        at::Tensor cu_seqlens_v_cpu = cu_seqlens_v.to(torch::kCPU);
-        const int* cu_seqlens_v_data = cu_seqlens_v_cpu.data_ptr<int>();
-        printf("params.cu_seqlens_v: ");
-        for (int i = 0; i < batch_size + 1; ++i) {
-            printf("%d ", cu_seqlens_v_data[i]);
-        }
-        printf("\n");
-    }
+    // {
+    //     // Copy cu_seqlens_v to CPU for printing
+    //     at::Tensor cu_seqlens_v_cpu = cu_seqlens_v.to(torch::kCPU);
+    //     const int* cu_seqlens_v_data = cu_seqlens_v_cpu.data_ptr<int>();
+    //     printf("params.cu_seqlens_v: ");
+    //     for (int i = 0; i < batch_size + 1; ++i) {
+    //         printf("%d ", cu_seqlens_v_data[i]);
+    //     }
+    //     printf("\n");
+    // }
     params.total_q = total_q;
 
     params.m_block_dim = 16;
