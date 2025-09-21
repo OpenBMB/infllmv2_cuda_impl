@@ -91,13 +91,16 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
     k = k.transpose(0, 1).contiguous().clone()
     v = v.transpose(0, 1).contiguous().clone()
 
+    cu_seqlens_v = cu_seqlens_k.clone()
+    print(f"cu_seqlens_k: {cu_seqlens_k}")
+    print(f"cu_seqlens_v: {cu_seqlens_v}")
     flash_score = infllmv2_attn_stage1(
         q,
         k,
         torch.tensor([[[1]]], dtype=q.dtype, device=q.device),
         cu_seqlens_q=cu_seqlens_q,
         cu_seqlens_k=cu_seqlens_k,
-        cu_seqlens_v=cu_seqlens_k,
+        cu_seqlens_v=cu_seqlens_v,
         max_seqlen_q=max(seqlen_qs),
         max_seqlen_k=max(seqlen_ks),
         causal=causal,
@@ -139,16 +142,16 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
         print(f"{seqlen_q=} {seqlen_k=} {causal=}")
         print("score max diff :", (naive_score - flash_score).abs().max())
         
-        breakpoint()
+        # breakpoint()
         if (naive_score - flash_score).abs().max() > 1e-2:
             print(f"error: seqlen_qs={seqlen_qs}, seqlen_ks={seqlen_ks}")
 
 if __name__ == "__main__":
     # Test 5 cases for causal=False
-    # test_seqlens = [100, 500, 1000, 5000, 9000]
-    test_seqlens = [2048]
-    # for seqlen in test_seqlens:
-    #     test_flash_attn_varlen(seqlen_q=1, seqlen_k=seqlen, causal=False)
+    test_seqlens = [1000, 5000, 9000]
+    # test_seqlens = [2048]
+    for seqlen in test_seqlens:
+        test_flash_attn_varlen(seqlen_q=1, seqlen_k=seqlen, causal=False)
     
     # Test 5 cases for causal=True
     for seqlen in test_seqlens:
