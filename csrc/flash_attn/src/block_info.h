@@ -26,7 +26,7 @@ struct BlockInfo {
         // Otherwise it's cu_seqlens_v[bidb], i.e., we use cu_seqlens_v to store the sequence lengths of V.
         , leftpad_v(params.leftpad_v == nullptr ? 0 : params.leftpad_v[bidb])
         , seqlen_v_cache((!Varlen || params.cu_seqlens_v == nullptr ? params.seqlen_v : (params.is_seqlens_v_cumulative ? params.cu_seqlens_v[bidb + 1] - sum_s_v : params.cu_seqlens_v[bidb])) - leftpad_v)
-        , actual_seqlen_v(params.seqused_v ? params.seqused_v[bidb] - leftpad_v : seqlen_v_cache + (params.vnew_ptr == nullptr ? 0 : params.seqlen_vnew))
+        , actual_seqlen_c(params.seqused_v ? params.seqused_v[bidb] - leftpad_v : seqlen_v_cache + (params.vnew_ptr == nullptr ? 0 : params.seqlen_vnew))
         {
         }
 
@@ -59,10 +59,10 @@ struct BlockInfo {
     const int leftpad_k;
     const int seqlen_k_cache;
     const int actual_seqlen_k;
-    // We have to have seqlen_v_cache declared before actual_seqlen_v, otherwise actual_seqlen_v is set to 0.
+    // We have to have seqlen_v_cache declared before actual_seqlen_c, otherwise actual_seqlen_c is set to 0.
     const int leftpad_v;
     const int seqlen_v_cache;
-    const int actual_seqlen_v;
+    const int actual_seqlen_c;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
