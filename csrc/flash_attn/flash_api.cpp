@@ -972,6 +972,7 @@ mha_varlen_fwd_stage1(at::Tensor &q,  // total_q x num_heads x head_size, total_
                      /*unpadded_lse*/true);
 
     params.cu_seqlens_v = static_cast<int *>(cu_seqlens_v.data_ptr());
+    params.is_seqlens_v_cumulative = true;  // Treat cu_seqlens_v as cumulative sequence lengths
     {
         // Copy cu_seqlens_v to CPU for printing
         at::Tensor cu_seqlens_v_cpu = cu_seqlens_v.to(torch::kCPU);
@@ -995,6 +996,7 @@ mha_varlen_fwd_stage1(at::Tensor &q,  // total_q x num_heads x head_size, total_
     }
     params.page_block_size = page_block_size;
     // Keep references to these tensors to extend their lifetime
+
 
     if (leftpad_k_.has_value()) {
         auto leftpad_k = leftpad_k_.value();

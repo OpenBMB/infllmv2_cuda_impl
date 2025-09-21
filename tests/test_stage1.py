@@ -74,14 +74,16 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
     # 准备输入数据
     q = torch.randn(n_heads, total_seqlen_q, head_dim, dtype=dtype).cuda()
     k = torch.randn(n_kv_heads, total_seqlen_k, head_dim, dtype=dtype).cuda()
-    v = torch.randn(n_kv_heads, total_seqlen_k, head_dim, dtype=dtype).cuda()
-    
+    # v = torch.randn(n_kv_heads, total_seqlen_k, head_dim, dtype=dtype).cuda()
+    v = k.clone()
     # 计算累积序列长度
     cu_seqlens_q = torch.zeros(batch_size + 1, dtype=torch.int32, device='cuda')
     cu_seqlens_k = torch.zeros(batch_size + 1, dtype=torch.int32, device='cuda')
+    cu_seqlens_v = torch.zeros(batch_size + 1, dtype=torch.int32, device='cuda')
     for i in range(batch_size):
         cu_seqlens_q[i + 1] = cu_seqlens_q[i] + seqlen_qs[i]
         cu_seqlens_k[i + 1] = cu_seqlens_k[i] + seqlen_ks[i]
+        cu_seqlens_v[i + 1] = cu_seqlens_v[i] + seqlen_ks[i]  # v has same lengths as k
 
     # 朴素实现
     if not bench:
@@ -90,14 +92,12 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
     q = q.transpose(0, 1).contiguous().clone()
     k = k.transpose(0, 1).contiguous().clone()
     v = v.transpose(0, 1).contiguous().clone()
-
-    cu_seqlens_v = cu_seqlens_k.clone()
     print(f"cu_seqlens_k: {cu_seqlens_k}")
     print(f"cu_seqlens_v: {cu_seqlens_v}")
     flash_score = infllmv2_attn_stage1(
         q,
         k,
-        torch.tensor([[[1]]], dtype=q.dtype, device=q.device),
+        v,
         cu_seqlens_q=cu_seqlens_q,
         cu_seqlens_k=cu_seqlens_k,
         cu_seqlens_v=cu_seqlens_v,

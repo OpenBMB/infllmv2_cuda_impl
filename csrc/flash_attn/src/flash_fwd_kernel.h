@@ -1228,6 +1228,11 @@ inline __device__ void compute_attn_1rowblock_splitkv_stage1(const Params &param
         ? n_split_idx * n_blocks_per_split
         : std::max(n_split_idx * n_blocks_per_split, (m_block * kBlockM + binfo.actual_seqlen_k - binfo.actual_seqlen_q - params.window_size_left) / kBlockN);
     int n_block_max = std::min(cute::ceil_div(binfo.actual_seqlen_k, kBlockN), (n_split_idx + 1) * n_blocks_per_split);
+    int n_block_max_c = std::min(cute::ceil_div(binfo.actual_seqlen_v, kBlockN), (n_split_idx + 1) * n_blocks_per_split);
+    if (tidx == 0) {
+        printf("n_block_max = %d, n_block_max_c = %d, binfo.actual_seqlen_k = %d, binfo.actual_seqlen_v = %d, kBlockN = %d, n_split_idx = %d, n_blocks_per_split = %d\n", n_block_max, n_block_max_c, binfo.actual_seqlen_k, binfo.actual_seqlen_v, kBlockN, n_split_idx, n_blocks_per_split);
+    }
+    
     if (Is_causal || Is_local) {
         const int max_q = (m_block + 1) * kBlockM / params.m_block_dim - 1;
         const int max_k = (max_q - /*TODO stride=*/16 + 1) / /*TODO stride=*/16;

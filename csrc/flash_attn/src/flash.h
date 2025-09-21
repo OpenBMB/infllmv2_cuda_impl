@@ -61,7 +61,7 @@ struct Flash_fwd_params : public Qkv_params {
     void * __restrict__ softmax_lseaccum_ptr;
 
     // The dimensions.
-    int b, seqlen_q, seqlen_k, seqlen_knew, d, seqlen_q_rounded, seqlen_k_rounded, d_rounded, rotary_dim, total_q;
+    int b, seqlen_q, seqlen_k, seqlen_v, seqlen_knew, seqlen_vnew, d, seqlen_q_rounded, seqlen_k_rounded, d_rounded, rotary_dim, total_q;
 
     // The scaling factors for the kernel.
     float scale_softmax;
@@ -72,10 +72,11 @@ struct Flash_fwd_params : public Qkv_params {
     int * __restrict__ cu_seqlens_k;
     int * __restrict__ cu_seqlens_v;
     int * __restrict__ leftpad_k;
+    int * __restrict__ leftpad_v;
 
     // If provided, the actual length of each k sequence.
     int * __restrict__ seqused_k;
-
+    int * __restrict__ seqused_v;
     uint64_t *__restrict__ blockmask;
     int m_block_dim, n_block_dim, num_k_heads;
     int num_blocks_m, num_blocks_n;
@@ -130,6 +131,10 @@ struct Flash_fwd_params : public Qkv_params {
     // If is_seqlens_k_cumulative, then seqlen_k is cu_seqlens_k[bidb + 1] - cu_seqlens_k[bidb].
     // Otherwise it's cu_seqlens_k[bidb], i.e., we use cu_seqlens_k to store the sequence lengths of K.
     bool is_seqlens_k_cumulative;
+    
+    // If is_seqlens_v_cumulative, then seqlen_v is cu_seqlens_v[bidb + 1] - cu_seqlens_v[bidb].
+    // Otherwise it's cu_seqlens_v[bidb], i.e., we use cu_seqlens_v to store the sequence lengths of V.
+    bool is_seqlens_v_cumulative;
 
     bool is_rotary_interleaved;
 
