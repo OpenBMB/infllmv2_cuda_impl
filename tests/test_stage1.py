@@ -6,16 +6,17 @@ from infllm_v2 import infllmv2_attn_stage1
 def round_multiple(x, m):
     return (x + m - 1) // m * m
 
-def naive_attention(q, k, v, cu_seqlens_q, cu_seqlens_k, causal=False):
+def naive_attention(q, k, v, cu_seqlens_q, cu_seqlens_k, cu_seqlens_v, causal=False):
     # 将 varlen 输入转换为 padded 形式
     batch_size = len(cu_seqlens_q) - 1
     max_seqlen_q = max(cu_seqlens_q[i+1] - cu_seqlens_q[i] for i in range(batch_size))
     max_seqlen_k = max(cu_seqlens_k[i+1] - cu_seqlens_k[i] for i in range(batch_size))
+    max_seqlen_v = max(cu_seqlens_v[i+1] - cu_seqlens_v[i] for i in range(batch_size))
     
     # 创建 padded 张量
     q_padded = torch.zeros(q.shape[0], batch_size, max_seqlen_q, q.shape[-1], device=q.device, dtype=q.dtype)
     k_padded = torch.zeros(k.shape[0], batch_size, max_seqlen_k, k.shape[-1], device=k.device, dtype=k.dtype)
-    v_padded = torch.zeros(v.shape[0], batch_size, max_seqlen_k, v.shape[-1], device=v.device, dtype=v.dtype)
+    v_padded = torch.zeros(v.shape[0], batch_size, max_seqlen_v, v.shape[-1], device=v.device, dtype=v.dtype)
     
     # 填充数据
     for i in range(batch_size):
@@ -23,9 +24,11 @@ def naive_attention(q, k, v, cu_seqlens_q, cu_seqlens_k, causal=False):
         q_end = cu_seqlens_q[i + 1]
         k_start = cu_seqlens_k[i]
         k_end = cu_seqlens_k[i + 1]
+        v_start = cu_seqlens_v[i]
+        v_end = cu_seqlens_v[i + 1]
         q_padded[:, i, :q_end-q_start] = q[:, q_start:q_end]
         k_padded[:, i, :k_end-k_start] = k[:, k_start:k_end]
-        v_padded[:, i, :k_end-k_start] = v[:, k_start:k_end]
+        v_padded[:, i, :v_end-v_start] = v[:, v_start:v_end]
     
     # 计算 attention
     k_padded = k_padded.repeat_interleave(q_padded.shape[0] // k_padded.shape[0], dim=0)
@@ -64,18 +67,19 @@ def naive_attention(q, k, v, cu_seqlens_q, cu_seqlens_k, causal=False):
     final_result = torch.where(torch.isnan(final_result), 0, final_result)
     return final_result
 
-def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, head_dim=128, dtype=torch.bfloat16, bench=False, causal=False, batch_size=2):
+def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, seqlen_v=16, n_heads=32, n_kv_heads=2, head_dim=128, dtype=torch.bfloat16, bench=False, causal=False, batch_size=2):
     # 生成不同长度的序列
     seqlen_qs = [seqlen_q // 2, seqlen_q]  # 两个序列，长度不同
     seqlen_ks = [seqlen_k // 2, seqlen_k]  # k 也使用不同长度
+    seqlen_vs = [seqlen_v // 2, seqlen_v]  # v 也使用不同长度
     total_seqlen_q = sum(seqlen_qs)
     total_seqlen_k = sum(seqlen_ks)
+    total_seqlen_v = sum(seqlen_vs)
     
     # 准备输入数据
     q = torch.randn(n_heads, total_seqlen_q, head_dim, dtype=dtype).cuda()
     k = torch.randn(n_kv_heads, total_seqlen_k, head_dim, dtype=dtype).cuda()
-    # v = torch.randn(n_kv_heads, total_seqlen_k, head_dim, dtype=dtype).cuda()
-    v = k.clone()
+    v = torch.randn(n_kv_heads, total_seqlen_v, head_dim, dtype=dtype).cuda()
     # 计算累积序列长度
     cu_seqlens_q = torch.zeros(batch_size + 1, dtype=torch.int32, device='cuda')
     cu_seqlens_k = torch.zeros(batch_size + 1, dtype=torch.int32, device='cuda')
@@ -83,11 +87,11 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
     for i in range(batch_size):
         cu_seqlens_q[i + 1] = cu_seqlens_q[i] + seqlen_qs[i]
         cu_seqlens_k[i + 1] = cu_seqlens_k[i] + seqlen_ks[i]
-        cu_seqlens_v[i + 1] = cu_seqlens_v[i] + seqlen_ks[i]  # v has same lengths as k
+        cu_seqlens_v[i + 1] = cu_seqlens_v[i] + seqlen_vs[i]  # v has different lengths
 
     # 朴素实现
     if not bench:
-        naive_score = naive_attention(q, k, v, cu_seqlens_q, cu_seqlens_k, causal=causal)
+        naive_score = naive_attention(q, k, v, cu_seqlens_q, cu_seqlens_k, cu_seqlens_v, causal=causal)
 
     q = q.transpose(0, 1).contiguous().clone()
     k = k.transpose(0, 1).contiguous().clone()
@@ -151,11 +155,11 @@ if __name__ == "__main__":
     test_seqlens = [1000, 5000, 9000]
     # test_seqlens = [2048]
     for seqlen in test_seqlens:
-        test_flash_attn_varlen(seqlen_q=1, seqlen_k=seqlen, causal=False)
+        test_flash_attn_varlen(seqlen_q=1, seqlen_k=seqlen, seqlen_v = seqlen//4, causal=False)
     
     # Test 5 cases for causal=True
     for seqlen in test_seqlens:
-        test_flash_attn_varlen(seqlen_q=seqlen, seqlen_k=seqlen//16, causal=False)
+        test_flash_attn_varlen(seqlen_q=seqlen, seqlen_k=seqlen//16, seqlen_v = seqlen // 64, causal=True)
 
     # test_flash_attn_varlen(seqlen_q=10000, seqlen_k=10000//16, causal=False)
     # test_flash_attn_varlen(seqlen_q=10000, seqlen_k=10000//16, causal=True)
