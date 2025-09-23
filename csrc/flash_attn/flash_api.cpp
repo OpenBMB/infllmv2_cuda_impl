@@ -788,6 +788,7 @@ mha_varlen_fwd_stage1(at::Tensor &q,  // total_q x num_heads x head_size, total_
                c10::optional<at::Tensor> &out_, // total_q x num_heads x head_size, total_k := \sum_{i=0}^{b} s_i
                const at::Tensor &cu_seqlens_q,  // b+1
                const at::Tensor &cu_seqlens_k,  // b+1
+               const at::Tensor &cu_seqlens_v,  // b+1
                c10::optional<at::Tensor> &seqused_k, // b. If given, only this many elements of each batch element's keys are used.
                c10::optional<const at::Tensor> &leftpad_k_, // batch_size
                c10::optional<at::Tensor> &block_table_, // batch_size x max_num_blocks_per_seq
@@ -825,10 +826,12 @@ mha_varlen_fwd_stage1(at::Tensor &q,  // total_q x num_heads x head_size, total_
     TORCH_CHECK(v.dtype() == q_dtype, "query and value must have the same dtype");
     TORCH_CHECK(cu_seqlens_q.dtype() == torch::kInt32, "cu_seqlens_q must have dtype int32");
     TORCH_CHECK(cu_seqlens_k.dtype() == torch::kInt32, "cu_seqlens_k must have dtype int32");
+    TORCH_CHECK(cu_seqlens_v.dtype() == torch::kInt32, "cu_seqlens_v must have dtype int32");
 
     CHECK_DEVICE(q); CHECK_DEVICE(k); CHECK_DEVICE(v);
     CHECK_DEVICE(cu_seqlens_q);
     CHECK_DEVICE(cu_seqlens_k);
+    CHECK_DEVICE(cu_seqlens_v);
 
     at::Tensor block_table;
     const bool paged_KV = block_table_.has_value();
@@ -844,6 +847,7 @@ mha_varlen_fwd_stage1(at::Tensor &q,  // total_q x num_heads x head_size, total_
     TORCH_CHECK(v.stride(-1) == 1, "Input tensor must have contiguous last dimension");
     CHECK_CONTIGUOUS(cu_seqlens_q);
     CHECK_CONTIGUOUS(cu_seqlens_k);
+    CHECK_CONTIGUOUS(cu_seqlens_v);
 
     const auto sizes = q.sizes();
 
@@ -898,6 +902,7 @@ mha_varlen_fwd_stage1(at::Tensor &q,  // total_q x num_heads x head_size, total_
 
     CHECK_SHAPE(cu_seqlens_q, batch_size + 1);
     CHECK_SHAPE(cu_seqlens_k, batch_size + 1);
+    CHECK_SHAPE(cu_seqlens_v, batch_size + 1);
     if (seqused_k.has_value()){
         auto seqused_k_ = seqused_k.value();
         TORCH_CHECK(seqused_k_.dtype() == torch::kInt32, "seqused_k must have dtype int32");
@@ -965,6 +970,19 @@ mha_varlen_fwd_stage1(at::Tensor &q,  // total_q x num_heads x head_size, total_
                      softcap,
                      seqlenq_ngroups_swapped,
                      /*unpadded_lse*/true);
+
+    params.cu_seqlens_v = static_cast<int *>(cu_seqlens_v.data_ptr());
+    params.is_seqlens_v_cumulative = true;  // Treat cu_seqlens_v as cumulative sequence lengths
+    // {
+    //     // Copy cu_seqlens_v to CPU for printing
+    //     at::Tensor cu_seqlens_v_cpu = cu_seqlens_v.to(torch::kCPU);
+    //     const int* cu_seqlens_v_data = cu_seqlens_v_cpu.data_ptr<int>();
+    //     printf("params.cu_seqlens_v: ");
+    //     for (int i = 0; i < batch_size + 1; ++i) {
+    //         printf("%d ", cu_seqlens_v_data[i]);
+    //     }
+    //     printf("\n");
+    // }
     params.total_q = total_q;
 
     params.m_block_dim = 16;
@@ -978,6 +996,7 @@ mha_varlen_fwd_stage1(at::Tensor &q,  // total_q x num_heads x head_size, total_
     }
     params.page_block_size = page_block_size;
     // Keep references to these tensors to extend their lifetime
+
 
     if (leftpad_k_.has_value()) {
         auto leftpad_k = leftpad_k_.value();
