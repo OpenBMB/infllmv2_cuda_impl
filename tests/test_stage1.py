@@ -64,7 +64,7 @@ def naive_attention(q, k, v, cu_seqlens_q, cu_seqlens_k, causal=False):
     final_result = torch.where(torch.isnan(final_result), 0, final_result)
     return final_result
 
-def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, head_dim=128, dtype=torch.float16, bench=False, causal=False, batch_size=2):
+def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, head_dim=128, dtype=torch.bfloat16, bench=False, causal=False, batch_size=2):
     # 生成不同长度的序列
     seqlen_qs = [seqlen_q // 2, seqlen_q]  # 两个序列，长度不同
     seqlen_ks = [seqlen_k // 2, seqlen_k]  # k 也使用不同长度
