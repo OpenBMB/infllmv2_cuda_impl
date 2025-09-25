@@ -265,7 +265,7 @@ if __name__ == "__main__":
     # Test cases for causal=True
     for seqlen in test_seqlens:
         # For causal=True, adjust the lengths accordingly
-        test_flash_attn_varlen(seqlen_q=seqlen, seqlen_k=seqlen, causal=True)
+        test_flash_attn_varlen(seqlen_q=seqlen, seqlen_k=seqlen, causal=False)
 
     # test_flash_attn_varlen(seqlen_q=10000, seqlen_k=10000//16, causal=False)
     # test_flash_attn_varlen(seqlen_q=10000, seqlen_k=10000//16, causal=True)

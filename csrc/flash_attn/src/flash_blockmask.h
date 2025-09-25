@@ -30,11 +30,17 @@ class fwdIterator{
                         row_offset * uint64_per_row +
                         loop_step_idx * uint64_per_row;
 
+        printf("blockmask_ptr = %d\n", blockmask_ptr);
+
         const int q_block_idx = loop_step_idx + cache_seqlen_k;
     }
 
     __device__ int max_no_larger(int target) const {
-        if (blockmask_ptr == nullptr) return target;
+        if (blockmask_ptr == nullptr){
+            // printf("blockmask_ptr is nullptr\n");
+            return target;
+        }
+        printf("blockmask_ptr is NOT!!!! nullptr\n");
         if(max_block_idx == 0){
             return -1;
         };

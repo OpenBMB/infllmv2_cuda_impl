@@ -1233,11 +1233,32 @@ inline __device__ void compute_attn_1rowblock_splitkv_stage1(const Params &param
     //     printf("n_block_max = %d, n_block_max_c = %d, binfo.actual_seqlen_k = %d, binfo.actual_seqlen_c = %d, kBlockN = %d, n_split_idx = %d, n_blocks_per_split = %d\n", n_block_max, n_block_max_c, binfo.actual_seqlen_k, binfo.actual_seqlen_c, kBlockN, n_split_idx, n_blocks_per_split);
     // }
     
-    if (Is_causal || Is_local) {
+    if (Is_local || Is_causal) {
+        // 注意到存在q_len比k_len短的情况，避免截断原本需要的k
+        // k对应以16为步长移动的, 计算q的长度对应的k, 然后计算偏移
+        const int _ori_actual_seqlen_q = binfo.actual_seqlen_q / params.m_block_dim;
+        const int _k_stride = 16;
+        const int _k_actual_seqlen_q = (_ori_actual_seqlen_q - _k_stride + 1 ) / _k_stride;
+        const int _max_seqlen_k = binfo.actual_seqlen_c;
+        const int _offset_k = _max_seqlen_k - _k_actual_seqlen_q;
+
+        // coarse kernel对应以64为步长移动的, 计算q的长度对应的k, 然后计算偏移
+        const int _c_stride = 64;
+        const int _c_actual_seqlen_q = (_ori_actual_seqlen_q - _c_stride + 1 ) / _c_stride;
+        // 分析可知上下界算出来的_max_seqlen_c是一样的
+        const int _max_seqlen_c = ((_max_seqlen_k * 16 + 15) - 64 + 1) / 64;
+        const int _offset_c = _max_seqlen_c - _c_actual_seqlen_q;
+        // if (cute::thread0()) {
+        // printf("_ori_actual_seqlen_q = %d, _k_actual_seqlen_q = %d, _max_seqlen_k = %d, _offset_k = %d, _c_actual_seqlen_q = %d, _max_seqlen_c = %d, _offset_c = %d\n", _ori_actual_seqlen_q, _k_actual_seqlen_q, _max_seqlen_k, _offset_k, _c_actual_seqlen_q, _max_seqlen_c, _offset_c); }
+
+        flash::cp_async_wait<0>(); __syncthreads();
+
+        // 如果q原本和k等长，可以_k_actual_seqlen_q == _max_seqlen_k, _c_actual_seqlen_q == _max_seqlen_k / 4
+
         const int max_q = (m_block + 1) * kBlockM / params.m_block_dim - 1;
-        const int max_k = (max_q - 16 + 1) / 16;
+        const int max_k = (max_q - 16 + 1) / 16 + _offset_k;
         n_block_max = std::min(n_block_max, cute::ceil_div(max_k, kBlockN));
-        const int max_c = (max_q - 64 + 1) / 64;
+        const int max_c = (max_q - 64 + 1) / 64 + _offset_c;
         n_block_max_c = std::min(n_block_max_c, cute::ceil_div(max_c, kBlockN));
     }
     if (n_block_min >= n_block_max_c) {  // This also covers the case where n_block_max <= 0

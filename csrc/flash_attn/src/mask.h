@@ -268,10 +268,22 @@ struct Mask {
                         const int row_idx = row_idx_base + i * 8;
                         
                         const int orig_row_idx = row_idx / this->m_block_dim;
+                        const int orig_max_seqlen_q = max_seqlen_q / this->m_block_dim;
 
-                        // 计算左边界，使用与右边界类似的基于stride的逻辑
+                        // 计算压缩后的max_seqlen_q
+                        const int compress_stride = stride;
+                        const int compressed_max_seqlen_q = (orig_max_seqlen_q - compress_stride + 1 ) / compress_stride;
+                        const int compressed_row_idx = (orig_row_idx - stride + 1) / stride;
+                        int _max_seqlen_k = max_seqlen_k;
+                        if (stride == 64){
+                            _max_seqlen_k = (max_seqlen_k * 16 + 15 - 64 + 1) / 64;
+                            // _max_seqlen_k = max_seqlen_k;
+                        }
+                        const int offset_row_idx = std::max(0, (orig_row_idx + 1) / stride - 1 + _max_seqlen_k - compressed_max_seqlen_q);
+                        
                         const int col_idx_limit_left = std::max(0, (orig_row_idx - stride + 1) / stride - window_size_left);
-                        const int col_idx_limit_right = std::min(max_seqlen_k, (orig_row_idx - stride + 1) / stride + window_size_right);
+                        const int col_idx_limit_right = std::min(_max_seqlen_k, (offset_row_idx + window_size_right));
+                        
                         #pragma unroll
                         for (int nj = 0; nj < size<1, 1>(tensor); ++nj) {
                             const int col_idx_base = col_idx_offset + nj * 8;
