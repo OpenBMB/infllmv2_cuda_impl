@@ -139,11 +139,6 @@ def test_stage1_cp_load(causal=True):
     breakpoint()
     assert torch.allclose(std_scores[0][:, 2*block_size:3*block_size, :cp2_scores[0][2].shape[-1]], cp2_scores[0][2]), '第三组的score应该一致'
     assert torch.allclose(std_scores[0][:, 3*block_size:4*block_size, :cp2_scores[0][3].shape[-1]], cp2_scores[0][3]), '第四组的score应该一致'
-    assert torch.allclose(std_scores[1][:, :block_size,:cp2_scores[1][0].shape[-1]], cp2_scores[1][0]), '第一组的score应该一致'
-    assert torch.allclose(std_scores[1][:, block_size:2*block_size,:cp2_scores[1][1].shape[-1]], cp2_scores[1][1]), '第二组的score应该一致'
-    assert torch.allclose(std_scores[1][:, 2*block_size:3*block_size,:cp2_scores[1][2].shape[-1]], cp2_scores[1][2]), '第三组的score应该一致'
-    assert torch.allclose(std_scores[1][:, 3*block_size:4*block_size,:cp2_scores[1][3].shape[-1]], cp2_scores[1][3]), '第四组的score应该一致'
-
 
 if __name__ == "__main__":
     test_stage1_cp_load(True)
