@@ -40,7 +40,7 @@ class fwdIterator{
             // printf("blockmask_ptr is nullptr\n");
             return target;
         }
-        printf("blockmask_ptr is NOT!!!! nullptr\n");
+        // printf("blockmask_ptr is NOT!!!! nullptr\n");
         if(max_block_idx == 0){
             return -1;
         };
