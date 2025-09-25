@@ -270,8 +270,14 @@ struct Mask {
                         const int orig_row_idx = row_idx / this->m_block_dim;
 
                         // 计算左边界，使用与右边界类似的基于stride的逻辑
+                        // orig_row_idx = (orig_row_idx - stride + 1) / stride
+                        // orig_row_idx = y * stride + (stride - 1)
+                        // 我们是已经知道orig_row_idx的，对这个做个变换吧
+                        // 我理解我们现在的问题可能是right的坐标计算得不对？, 可能会被max_seqlen_q bound住？
+
                         const int col_idx_limit_left = std::max(0, (orig_row_idx - stride + 1) / stride - window_size_left);
                         const int col_idx_limit_right = std::min(max_seqlen_k, (orig_row_idx - stride + 1) / stride + window_size_right);
+                        printf("orig_row_idx = %d, col_idx_limit_left = %d, col_idx_limit_right = %d\n, max_seqlen_k = %d\n", orig_row_idx, col_idx_limit_left, col_idx_limit_right, max_seqlen_k);
                         #pragma unroll
                         for (int nj = 0; nj < size<1, 1>(tensor); ++nj) {
                             const int col_idx_base = col_idx_offset + nj * 8;
