@@ -69,7 +69,7 @@ def test_stage1_cp_load(causal=True):
                 cu_seqlens_k=cu_seqlens_k,
                 cu_seqlens_v=cu_seqlens_k,
                 max_seqlen_q=max_seqlen_q,
-                max_seqlen_k=max_seqlen_k,
+                max_seqlen_k=total_seqlen_q,
                 causal=causal,
             )
             # exit()
