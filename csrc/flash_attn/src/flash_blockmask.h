@@ -30,7 +30,7 @@ class fwdIterator{
                         row_offset * uint64_per_row +
                         loop_step_idx * uint64_per_row;
 
-        printf("blockmask_ptr = %d\n", blockmask_ptr);
+        // printf("blockmask_ptr = %d\n", blockmask_ptr);
 
         const int q_block_idx = loop_step_idx + cache_seqlen_k;
     }
