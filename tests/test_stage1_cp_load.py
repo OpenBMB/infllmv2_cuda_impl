@@ -51,6 +51,7 @@ def test_stage1_cp_load(causal=True):
             cu_seqlens_k = torch.load(f'{home_dir}/cu_seqlens_k_2_{rank}_{j * block_size}.pt', map_location=device)
             max_seqlen_q = torch.load(f'{home_dir}/max_seqlen_q_2_{rank}_{j * block_size}.pt', map_location=device)
             max_seqlen_k = torch.load(f'{home_dir}/max_seqlen_k_2_{rank}_{j * block_size}.pt', map_location=device)
+            print(cp2_q_j.shape, cp2_k_j.shape, cu_seqlens_q.shape, cu_seqlens_k.shape, max_seqlen_q, max_seqlen_k)
         
             # (Pdb) print(cp2_scores[0][0].shape)
             # torch.Size([2, 64, 31])
@@ -67,7 +68,7 @@ def test_stage1_cp_load(causal=True):
                 cp2_k_j,
                 cu_seqlens_q=cu_seqlens_q,
                 cu_seqlens_k=cu_seqlens_k,
-                cu_seqlens_v=cu_seqlens_k,
+                # cu_seqlens_v=cu_seqlens_k,
                 max_seqlen_q=max_seqlen_q,
                 max_seqlen_k=max_seqlen_k,
                 causal=causal,
@@ -105,7 +106,7 @@ def test_stage1_cp_load(causal=True):
             cp1_k[rank],
             cu_seqlens_q=cu_seqlens_q,
             cu_seqlens_k=cu_seqlens_k,
-            cu_seqlens_v=cu_seqlens_k,
+            # cu_seqlens_v=cu_seqlens_k,
             max_seqlen_q=max_seqlen_q,
             max_seqlen_k=max_seqlen_k,
             causal=causal,
