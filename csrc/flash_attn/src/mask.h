@@ -274,16 +274,20 @@ struct Mask {
                         const int compress_stride = stride;
                         const int compressed_max_seqlen_q = (orig_max_seqlen_q - compress_stride + 1 ) / compress_stride;
                         const int compressed_row_idx = (orig_row_idx - stride + 1) / stride;
-                        int _max_seqlen_k = max_seqlen_k;
-                        if (stride == 64){
-                            _max_seqlen_k = (max_seqlen_k * 16 + 15 - 64 + 1) / 64;
-                            // _max_seqlen_k = max_seqlen_k;
-                        }
+                        int _max_seqlen_k = max_seqlen_k; // compressed lse的时候max_seqlen_k是压缩后的长度
                         const int offset_row_idx = std::max(0, (orig_row_idx + 1) / stride - 1 + _max_seqlen_k - compressed_max_seqlen_q);
                         
                         const int col_idx_limit_left = std::max(0, (orig_row_idx - stride + 1) / stride - window_size_left);
                         const int col_idx_limit_right = std::min(_max_seqlen_k, (offset_row_idx + window_size_right));
+                        // const int col_idx_limit_right = std::min(max_seqlen_k, (orig_row_idx - stride + 1) / stride + window_size_right);
                         
+                        // if (cute::thread0()) {
+                        // if (stride == 64) {
+                            // printf("orig_row_idx = %d, orig_max_seqlen_q = %d, compressed_max_seqlen_q = %d, compressed_row_idx = %d, _max_seqlen_k = %d, offset_row_idx = %d, col_idx_limit_left = %d, col_idx_limit_right = %d\n", orig_row_idx, orig_max_seqlen_q, compressed_max_seqlen_q, compressed_row_idx, _max_seqlen_k, offset_row_idx, col_idx_limit_left, col_idx_limit_right);
+                        // }
+                        // }
+                        // flash::cp_async_wait<0>(); __syncthreads();
+
                         #pragma unroll
                         for (int nj = 0; nj < size<1, 1>(tensor); ++nj) {
                             const int col_idx_base = col_idx_offset + nj * 8;

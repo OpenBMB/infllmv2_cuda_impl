@@ -9,11 +9,11 @@ causal False
 '''
 
 # qi -> [qi * block_q: qi * block_q + block_q]
-def apply_causal_mask(S, qi, kj, max_k_len, causal=False):
+def apply_causal_mask(S, qi, kj, max_k_len, stride, causal=False):
     block_q, block_k = 16, 16
     for _i, i in enumerate(range(qi * block_q, (qi + 1) * block_q)):
         left_border = 0
-        right_border = max(0, (i - 15) // 16) if causal else max_k_len # offset = 0
+        right_border = max(0, (i - stride + 1) // stride) if causal else max_k_len # offset = 0
         for _j, j in enumerate(range(kj * block_k, (kj + 1) * block_k)):
             if j < left_border or j >= right_border:
                 S[:, _i, _j] = float('-inf')
@@ -22,6 +22,7 @@ def apply_causal_mask(S, qi, kj, max_k_len, causal=False):
 def compresssed_lse_online_softmax(q, k, compressed_k, block_q, block_k, seq_dim=0, causal=False):
     device = q.device
     dtype = q.dtype
+    
 
     head_n_q, head_n_k = q.shape[1], k.shape[1]
     q_len, k_len = q.shape[0], k.shape[0]
@@ -29,6 +30,10 @@ def compresssed_lse_online_softmax(q, k, compressed_k, block_q, block_k, seq_dim
     d = q.shape[-1]
     group_size = head_n_q // head_n_k
     # assert group_size == 16, "group_size must be 16, otherwise unsupported"
+
+    phase_1_stride = 64
+    if k_len == k_compressed_len:
+        phase_1_stride = 16
 
     # q [seq_len, head_n_q, head_dim]
     # k [seq_len, head_n_k, head_dim]
@@ -75,7 +80,7 @@ def compresssed_lse_online_softmax(q, k, compressed_k, block_q, block_k, seq_dim
         for kj in range(0, block_k_n_comp):
             local_kj = compressed_k_blocks[:, kj, :, :] # (head_n_q, block_k, d)
             S = local_qi @ local_kj.transpose(-2, -1) / (d ** 0.5) # (head_n_q, block_q, block_k)
-            S = apply_causal_mask(S, qi, kj, max_k_compressed_len, causal)
+            S = apply_causal_mask(S, qi, kj, max_k_compressed_len, phase_1_stride, causal)
             m_i_1 = m_i.clone()
             m_i = torch.maximum(m_i, S.max(dim=-1).values) # (head_n_q, block_q)
             # l_i = l_i-1.adjusted + new_exp_sum
@@ -93,7 +98,7 @@ def compresssed_lse_online_softmax(q, k, compressed_k, block_q, block_k, seq_dim
         for kj in range(0, block_k_n):
             local_kj = k_blocks[:, kj, :, :] # (head_n_q, block_k, d)
             S = local_qi @ local_kj.transpose(-2, -1) / (d ** 0.5) # (head_n_q, block_q, block_k)
-            S = apply_causal_mask(S, qi, kj, max_k_len, causal)
+            S = apply_causal_mask(S, qi, kj, max_k_len, 16, causal)
             out_float[ :, qi, kj, :, :] = torch.exp(S - l_blocks[:, qi, :].unsqueeze(-1))
 
     out = out_float.transpose(2,3).reshape(head_n_q, q_len, k_len).to(dtype)

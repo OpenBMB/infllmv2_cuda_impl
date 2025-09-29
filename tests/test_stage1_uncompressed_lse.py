@@ -132,7 +132,7 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
     # breakpoint()
     # 朴素实现
     if not bench:
-        naive_score = naive_attention(q, k, v, cu_seqlens_q, cu_seqlens_k, causal=causal)
+        naive_score = naive_attention(q, k, k, cu_seqlens_q, cu_seqlens_k, causal=causal)
         
 
     q = q.transpose(0, 1).contiguous().clone()
@@ -140,7 +140,7 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
     v = v.transpose(0, 1).contiguous().clone()
     
     dtype = torch.float32
-    torch_score = compresssed_lse_online_softmax(q.to(dtype), k.to(dtype), v.to(dtype), 16, 16, causal=causal)
+    torch_score = compresssed_lse_online_softmax(q.to(dtype), k.to(dtype), k.to(dtype), 16, 16, causal=causal)
     # print(f"Original k0 lengths: {seqlen_k0s}")
     # print(f"cu_seqlens_k0: {cu_seqlens_k0}")
     # print(f"Compressed k shape: {k.shape}")
@@ -155,10 +155,10 @@ def test_flash_attn_varlen(seqlen_q=256, seqlen_k=16, n_heads=32, n_kv_heads=2, 
     flash_score = infllmv2_attn_stage1(
         q,
         k,
-        v,
+        k,
         cu_seqlens_q=cu_seqlens_q,
         cu_seqlens_k=cu_seqlens_k,
-        cu_seqlens_v=cu_seqlens_v,
+        cu_seqlens_v=cu_seqlens_k,
         max_seqlen_q=max(seqlen_qs),
         max_seqlen_k=max(seqlen_ks),
         causal=causal,

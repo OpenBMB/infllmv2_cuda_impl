@@ -1232,34 +1232,41 @@ inline __device__ void compute_attn_1rowblock_splitkv_stage1(const Params &param
     // if (tidx == 0) {
     //     printf("n_block_max = %d, n_block_max_c = %d, binfo.actual_seqlen_k = %d, binfo.actual_seqlen_c = %d, kBlockN = %d, n_split_idx = %d, n_blocks_per_split = %d\n", n_block_max, n_block_max_c, binfo.actual_seqlen_k, binfo.actual_seqlen_c, kBlockN, n_split_idx, n_blocks_per_split);
     // }
+
+    int phase_1_stride = 64;
+    if (binfo.actual_seqlen_k == binfo.actual_seqlen_c) {
+        // 这种情况下根本就没做compressed lse
+        phase_1_stride = 16;
+    }
     
     if (Is_local || Is_causal) {
         // 注意到存在q_len比k_len短的情况，避免截断原本需要的k
         // k对应以16为步长移动的, 计算q的长度对应的k, 然后计算偏移
+        // 用 len - 15 / 16 这样计算是因为 block_size = 32
+        // (len - 32) / 16 + 1
         const int _ori_actual_seqlen_q = binfo.actual_seqlen_q / params.m_block_dim;
         const int _k_stride = 16;
         const int _k_actual_seqlen_q = (_ori_actual_seqlen_q - _k_stride + 1 ) / _k_stride;
-        const int _max_seqlen_k = binfo.actual_seqlen_c;
+        const int _max_seqlen_k = binfo.actual_seqlen_k;
         const int _offset_k = _max_seqlen_k - _k_actual_seqlen_q;
 
         // coarse kernel对应以64为步长移动的, 计算q的长度对应的k, 然后计算偏移
-        const int _c_stride = 64;
+        const int _c_stride = phase_1_stride;
         const int _c_actual_seqlen_q = (_ori_actual_seqlen_q - _c_stride + 1 ) / _c_stride;
         // 分析可知上下界算出来的_max_seqlen_c是一样的
-        const int _max_seqlen_c = ((_max_seqlen_k * 16 + 15) - 64 + 1) / 64;
+        const int _max_seqlen_c = ((_max_seqlen_k * 16 + 15) - phase_1_stride + 1) / phase_1_stride;
         const int _offset_c = _max_seqlen_c - _c_actual_seqlen_q;
-        // if (cute::thread0()) {
-        // printf("_ori_actual_seqlen_q = %d, _k_actual_seqlen_q = %d, _max_seqlen_k = %d, _offset_k = %d, _c_actual_seqlen_q = %d, _max_seqlen_c = %d, _offset_c = %d\n", _ori_actual_seqlen_q, _k_actual_seqlen_q, _max_seqlen_k, _offset_k, _c_actual_seqlen_q, _max_seqlen_c, _offset_c); }
-
-        flash::cp_async_wait<0>(); __syncthreads();
-
         // 如果q原本和k等长，可以_k_actual_seqlen_q == _max_seqlen_k, _c_actual_seqlen_q == _max_seqlen_k / 4
 
         const int max_q = (m_block + 1) * kBlockM / params.m_block_dim - 1;
         const int max_k = (max_q - 16 + 1) / 16 + _offset_k;
         n_block_max = std::min(n_block_max, cute::ceil_div(max_k, kBlockN));
-        const int max_c = (max_q - 64 + 1) / 64 + _offset_c;
+        const int max_c = (max_q - phase_1_stride + 1) / phase_1_stride + _offset_c;
         n_block_max_c = std::min(n_block_max_c, cute::ceil_div(max_c, kBlockN));
+
+        // if (cute::thread0()) {
+            // printf("binfo.actual_seqlen_c = %d, binfo.actual_seqlen_k = %d, _ori_actual_seqlen_q = %d, _k_actual_seqlen_q = %d, _max_seqlen_k = %d, _offset_k = %d, _c_actual_seqlen_q = %d, _max_seqlen_c = %d, _offset_c = %d, max_q = %d, max_k = %d, max_c = %d\n, n_block_max = %d, n_block_max_c = %d\n", binfo.actual_seqlen_c, binfo.actual_seqlen_k, _ori_actual_seqlen_q, _k_actual_seqlen_q, _max_seqlen_k, _offset_k, _c_actual_seqlen_q, _max_seqlen_c, _offset_c, max_q, max_k, max_c, n_block_max, n_block_max_c); //}
+        // flash::cp_async_wait<0>(); __syncthreads();
     }
     if (n_block_min >= n_block_max_c) {  // This also covers the case where n_block_max <= 0
         // We exit early and write 0 to gOaccum and -inf to gLSEaccum.
@@ -1464,7 +1471,7 @@ inline __device__ void compute_attn_1rowblock_splitkv_stage1(const Params &param
             }
 
             mask.template apply_mask_stage1<Is_causal, Is_even_MN>(
-                acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16, 64
+                acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16, phase_1_stride
             );
 
             next_block_idx = blockmask.max_no_larger(n_block-1);
@@ -1557,7 +1564,7 @@ inline __device__ void compute_attn_1rowblock_splitkv_stage1(const Params &param
         }
 
         mask.template apply_mask_stage1</*Causal_mask=*/false>(
-            acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16, 64
+            acc_s, n_block * kBlockN, m_block * kBlockM + (tidx / 32) * 16 + (tidx % 32) / 4, kNWarps * 16, phase_1_stride
         );
         softmax.template softmax_rescale_simple</*Is_first=*/false, /*Check_inf=*/Is_local>(acc_s, params.scale_softmax_log2);
 

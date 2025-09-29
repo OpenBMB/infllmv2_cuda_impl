@@ -58,9 +58,10 @@ def test_naive_torch_implementation(causal=False):
     stage1_score = infllmv2_attn_stage1(
         q.contiguous(), 
         k.contiguous(),
-        torch.tensor([[[1]]], dtype=q.dtype, device=q.device),
+        k.contiguous(),
         cu_seqlens_q=torch.tensor([0, q.shape[0]], device=q.device, dtype=torch.int32),
         cu_seqlens_k=torch.tensor([0, k.shape[0]], device=q.device, dtype=torch.int32),
+        cu_seqlens_v=torch.tensor([0, k.shape[0]], device=q.device, dtype=torch.int32),
         max_seqlen_q=q.shape[0],
         max_seqlen_k=k.shape[0],
         causal=causal,
@@ -79,7 +80,7 @@ def test_naive_torch_implementation(causal=False):
 
 if __name__ == "__main__":
     test_naive_torch_implementation(causal=False)
-    # test_naive_torch_implementation(causal=True)
+    test_naive_torch_implementation(causal=True)
     
 
 
