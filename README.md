@@ -19,6 +19,12 @@ Built upon [FlashAttention](https://github.com/Dao-AILab/flash-attention), our k
 
 ![InfLLM V2 Architecture](assets/infllm-v2.jpg)
 
+## TODO (Updated: 2025-09-30)
+
+- **Open-source Base Model and Training Data**: Release base model and training datasets to enable the open-source community to reproduce the training process
+- **Optimize Stage 1 Inference Operator**: Enhance the Stage 1 inference kernel by adding compressed LSE (LogSumExp) computation for improved efficiency
+- **Optimize Training Operator Speed**: Further optimize the training kernel performance for faster model training
+
 ## Two-Stage Architecture
 
 ### Stage 1: Top-K Context Selection
@@ -195,6 +201,13 @@ All benchmarks were conducted with the following configuration:
 If you use the InfLLM V2 CUDA kernels in your research, please cite:
 
 ```bibtex
+@article{infllmv2,
+  title={InfLLM-V2: Dense-Sparse Switchable Attention for Seamless Short-to-Long Adaptation},
+  author={Zhao, Weilin and Zhou, Zihan and Su, Zhou and Xiao, Chaojun and Li, Yuxuan and Li, Yanghao and Zhang, Yudi and Zhao, Weilun and Li, Zhen and Huang, Yuxiang and Sun, Ao and Han, Xu and Liu, Zhiyuan},
+  journal={arXiv preprint arXiv:2509.24663},
+  year={2025}
+}
+
 @article{minicpm4,
   title={MiniCPM4: Ultra-Efficient LLMs on End Devices},
   author={MiniCPM},
