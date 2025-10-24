@@ -1,6 +1,5 @@
 # InfLLM V2 CUDA Kernel Implementation
 
-[English](README.md) | [中文](README_zh.md)
 
 This repository contains the optimized CUDA kernel implementation for **InfLLM V2's Two-Stage Sparse Attention Mechanism**. Our implementation provides high-performance kernels for both Stage 1 (Top-K Context Selection) and Stage 2 (Sparse Attention Computation), enabling Large Language Models (LLMs) to efficiently process long contexts with trainable sparse patterns.
 
@@ -18,7 +17,13 @@ This CUDA kernel implementation includes both stages, providing:
 
 Built upon [FlashAttention](https://github.com/Dao-AILab/flash-attention), our kernels leverage efficient memory access patterns and optimized implementations for both stages.
 
-![InfLLM V2 Architecture](assets/infllm-v2.png)
+![InfLLM V2 Architecture](assets/infllm-v2.jpg)
+
+## TODO (Updated: 2025-09-30)
+
+- **Open-source Base Model and Training Data**: Release base model and training datasets to enable the open-source community to reproduce the training process
+- **Optimize Stage 1 Inference Operator**: Enhance the Stage 1 inference kernel by adding compressed LSE (LogSumExp) computation for improved efficiency
+- **Optimize Training Operator Speed**: Further optimize the training kernel performance for faster model training
 
 ## Two-Stage Architecture
 
@@ -65,26 +70,9 @@ The sparse attention stage performs standard attention computation, but only on 
 
 ### Build from Source
 
-#### For Training (main branch)
+#### For Training / Inference (main branch)
 
 ```bash
-# Clone the repository and use main branch for training
-git clone https://github.com/OpenBMB/infllm_v2_cuda.git
-cd infllm_v2_cuda
-git checkout main
-
-# Install with CUDA kernel compilation
-pip install -e .
-
-```
-
-#### For Hugging Face Inference (feature_infer branch)
-
-```bash
-# Clone the repository and use feature_infer branch for inference
-git clone https://github.com/OpenBMB/infllm_v2_cuda.git
-cd infllm_v2_cuda
-git checkout feature_infer
 
 # Install with CUDA kernel compilation
 pip install -e .
@@ -144,14 +132,12 @@ from infllm_v2 import infllmv2_attn_varlen_func
 #   - cu_seqlens_q, cu_seqlens_k: Cumulative sequence lengths
 #   - topk_idx: Selected block indices from Stage 1
 #   - max_seqlen_q, max_seqlen_k: Maximum sequence lengths
-#   - block_window_size: Optional local attention window size
 
 out_unpad = infllmv2_attn_varlen_func(
     q_unpad, k_unpad, v_unpad,
     cu_seqlens_q, cu_seqlens_k,
     topk_idx,  # Block indices selected in Stage 1
-    max_seqlen_q, max_seqlen_k,
-    block_window_size = 0,  # Additional local window for attention
+    max_seqlen_q, max_seqlen_k
 )
 ```
 
@@ -168,7 +154,6 @@ out_unpad = infllmv2_attn_varlen_func(
 - **q_unpad**: Query tensor in unpadded format (bfloat16)
 - **k_unpad, v_unpad**: Key and Value tensors in unpadded format
 - **topk_idx**: Integer tensor containing selected block indices from Stage 1
-- **block_window_size**: Size of local attention window (0 to disable)
 
 
 ### Performance Considerations
@@ -216,6 +201,13 @@ All benchmarks were conducted with the following configuration:
 If you use the InfLLM V2 CUDA kernels in your research, please cite:
 
 ```bibtex
+@article{infllmv2,
+  title={InfLLM-V2: Dense-Sparse Switchable Attention for Seamless Short-to-Long Adaptation},
+  author={Zhao, Weilin and Zhou, Zihan and Su, Zhou and Xiao, Chaojun and Li, Yuxuan and Li, Yanghao and Zhang, Yudi and Zhao, Weilun and Li, Zhen and Huang, Yuxiang and Sun, Ao and Han, Xu and Liu, Zhiyuan},
+  journal={arXiv preprint arXiv:2509.24663},
+  year={2025}
+}
+
 @article{minicpm4,
   title={MiniCPM4: Ultra-Efficient LLMs on End Devices},
   author={MiniCPM},
