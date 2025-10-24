@@ -99,11 +99,8 @@ if not SKIP_CUDA_BUILD:
     
     # 支持多种常见的GPU架构
     # 70: V100, 75: T4/RTX, 80: A100, 86: RTX 3090/RTX A6000, 89: RTX 4090, 90: H100
-<<<<<<< HEAD
     supported_archs = ["80"]
-=======
-    supported_archs = ["80", "86"]
->>>>>>> official/main
+
     for arch in supported_archs:
         cc_flag.extend(["-gencode", f"arch=compute_{arch},code=sm_{arch}"])
     
