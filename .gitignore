@@ -32,3 +32,4 @@ log/
 *.svg
 *.eps
 *.pdf
+out.txt
