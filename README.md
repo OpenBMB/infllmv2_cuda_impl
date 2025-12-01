@@ -1,6 +1,5 @@
 # InfLLM V2 CUDA Kernel Implementation
 
-
 This repository contains the optimized CUDA kernel implementation for **InfLLM V2's Two-Stage Sparse Attention Mechanism**. Our implementation provides high-performance kernels for both Stage 1 (Top-K Context Selection) and Stage 2 (Sparse Attention Computation), enabling Large Language Models (LLMs) to efficiently process long contexts with trainable sparse patterns.
 
 ## Overview
@@ -17,13 +16,18 @@ This CUDA kernel implementation includes both stages, providing:
 
 Built upon [FlashAttention](https://github.com/Dao-AILab/flash-attention), our kernels leverage efficient memory access patterns and optimized implementations for both stages.
 
-![InfLLM V2 Architecture](assets/infllm-v2.jpg)
+![InfLLM V2 Architecture](assets/infllm-v2.png)
 
-## TODO (Updated: 2025-09-30)
+## Open Source Resources
 
-- **Open-source Base Model and Training Data**: Release base model and training datasets to enable the open-source community to reproduce the training process
-- **Optimize Stage 1 Inference Operator**: Enhance the Stage 1 inference kernel by adding compressed LSE (LogSumExp) computation for improved efficiency
-- **Optimize Training Operator Speed**: Further optimize the training kernel performance for faster model training
+*Updated: 2025-12-01*
+
+We have released the training data and base model for InfLLM V2:
+
+🔗 **Data**: https://huggingface.co/datasets/openbmb/InfLLM-V2-data-5B  
+🔗 **Base Model**: https://huggingface.co/openbmb/InfLLM-V2-Short-Dense-Base
+
+The optimized Stage 1 implementation has been integrated into this repository.
 
 ## Two-Stage Architecture
 
