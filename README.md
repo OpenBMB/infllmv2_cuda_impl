@@ -24,8 +24,10 @@ Built upon [FlashAttention](https://github.com/Dao-AILab/flash-attention), our k
 
 We have released the training data and base model for InfLLM V2:
 
-🔗 **Data**: https://huggingface.co/datasets/openbmb/InfLLM-V2-data-5B  
-🔗 **Base Model**: https://huggingface.co/openbmb/InfLLM-V2-Short-Dense-Base
+🔗 **Training Data**: https://huggingface.co/datasets/openbmb/InfLLM-V2-data-5B  
+🔗 **Initial Model**: https://huggingface.co/openbmb/InfLLM-V2-Short-Dense-Base
+🔗 **Final Model**: https://huggingface.co/openbmb/InfLLM-V2-Long-Sparse-Base
+
 
 The optimized Stage 1 implementation has been integrated into this repository.
 
